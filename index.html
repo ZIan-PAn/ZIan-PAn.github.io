@@ -1,635 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>CS 280A — Computational Photography</title>
-
-    <style>
-        :root {
-            --bg: #0b0c10;
-            --surface: #12141a;
-            --surface-hover: #171a22;
-
-            --text: #f5f5f2;
-            --muted: #9da3ae;
-            --dim: #676d78;
-
-            --border: rgba(255, 255, 255, 0.09);
-
-            --accent: #9ad8ff;
-            --accent-2: #c8b6ff;
-
-            --max-width: 1180px;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            min-height: 100vh;
-
-            font-family:
-                Inter,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-
-            color: var(--text);
-
-            background:
-                radial-gradient(
-                    circle at 15% 0%,
-                    rgba(154, 216, 255, 0.11),
-                    transparent 30%
-                ),
-                radial-gradient(
-                    circle at 90% 15%,
-                    rgba(200, 182, 255, 0.09),
-                    transparent 30%
-                ),
-                var(--bg);
-
-            line-height: 1.6;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .container {
-            width: min(var(--max-width), calc(100% - 48px));
-            margin: 0 auto;
-        }
-
-        /* =====================
-           Navigation
-        ====================== */
-
-        nav {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-
-            border-bottom: 1px solid var(--border);
-
-            background: rgba(11, 12, 16, 0.72);
-
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-        }
-
-        .nav-inner {
-            min-height: 68px;
-
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        .brand-dot {
-            width: 10px;
-            height: 10px;
-
-            border-radius: 50%;
-
-            background:
-                linear-gradient(
-                    135deg,
-                    var(--accent),
-                    var(--accent-2)
-                );
-
-            box-shadow:
-                0 0 18px rgba(154, 216, 255, 0.5);
-        }
-
-        .nav-note {
-            color: var(--muted);
-            font-size: 13px;
-        }
-
-        /* =====================
-           Hero
-        ====================== */
-
-        .hero {
-            padding: 120px 0 100px;
-        }
-
-        .eyebrow {
-            margin-bottom: 22px;
-
-            color: var(--accent);
-
-            font-size: 12px;
-            font-weight: 700;
-
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-        }
-
-        h1 {
-            max-width: 1000px;
-
-            font-size: clamp(56px, 8vw, 104px);
-            line-height: 0.95;
-
-            letter-spacing: -0.065em;
-        }
-
-        .gradient-text {
-            background:
-                linear-gradient(
-                    100deg,
-                    #ffffff 0%,
-                    #b9dcff 48%,
-                    #d6c1ff 100%
-                );
-
-            background-clip: text;
-            -webkit-background-clip: text;
-
-            color: transparent;
-        }
-
-        .hero-description {
-            max-width: 760px;
-
-            margin-top: 32px;
-
-            color: var(--muted);
-
-            font-size: 18px;
-        }
-
-        /* =====================
-           Projects section
-        ====================== */
-
-        .projects {
-            padding: 40px 0 110px;
-        }
-
-        .section-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: end;
-
-            gap: 30px;
-
-            margin-bottom: 32px;
-        }
-
-        .section-top h2 {
-            font-size: 36px;
-            letter-spacing: -0.04em;
-        }
-
-        .section-top p {
-            color: var(--dim);
-            font-size: 13px;
-        }
-
-        /* =====================
-           Project cards
-        ====================== */
-
-        .project-list {
-            display: grid;
-            gap: 18px;
-        }
-
-        .project-card {
-            position: relative;
-
-            min-height: 240px;
-
-            display: grid;
-            grid-template-columns: 170px 1fr auto;
-            align-items: center;
-
-            gap: 34px;
-
-            padding: 36px;
-
-            overflow: hidden;
-
-            background: var(--surface);
-
-            border: 1px solid var(--border);
-            border-radius: 24px;
-
-            transition:
-                transform 0.3s ease,
-                background 0.3s ease,
-                border-color 0.3s ease;
-        }
-
-        .project-card:hover {
-            transform: translateY(-5px);
-
-            background: var(--surface-hover);
-
-            border-color: rgba(255, 255, 255, 0.16);
-        }
-
-        .project-card::before {
-            content: "";
-
-            position: absolute;
-
-            width: 340px;
-            height: 340px;
-
-            right: -160px;
-            top: -170px;
-
-            border-radius: 50%;
-
-            background:
-                rgba(154, 216, 255, 0.06);
-
-            filter: blur(20px);
-
-            transition: transform 0.4s ease;
-        }
-
-        .project-card:hover::before {
-            transform: scale(1.18);
-        }
-
-        .project-number {
-            position: relative;
-            z-index: 2;
-
-            color: var(--accent);
-
-            font-size: 62px;
-            font-weight: 700;
-
-            letter-spacing: -0.06em;
-        }
-
-        .project-info {
-            position: relative;
-            z-index: 2;
-        }
-
-        .project-label {
-            margin-bottom: 8px;
-
-            color: var(--dim);
-
-            font-size: 11px;
-
-            text-transform: uppercase;
-            letter-spacing: 0.14em;
-        }
-
-        .project-info h3 {
-            margin-bottom: 10px;
-
-            font-size: clamp(26px, 4vw, 40px);
-
-            letter-spacing: -0.04em;
-        }
-
-        .project-info p {
-            max-width: 670px;
-
-            color: var(--muted);
-
-            font-size: 15px;
-        }
-
-        .project-arrow {
-            position: relative;
-            z-index: 2;
-
-            width: 52px;
-            height: 52px;
-
-            display: flex;
-            justify-content: center;
-            align-items: center;
-
-            border: 1px solid var(--border);
-            border-radius: 50%;
-
-            color: var(--muted);
-
-            font-size: 22px;
-
-            transition:
-                transform 0.3s ease,
-                color 0.3s ease,
-                border-color 0.3s ease;
-        }
-
-        .project-card:hover .project-arrow {
-            transform: translateX(4px);
-
-            color: white;
-
-            border-color: rgba(255, 255, 255, 0.22);
-        }
-
-        /* =====================
-           Placeholder projects
-        ====================== */
-
-        .project-card.placeholder {
-            min-height: 150px;
-
-            opacity: 0.44;
-
-            pointer-events: none;
-        }
-
-        .project-card.placeholder .project-number {
-            font-size: 42px;
-        }
-
-        .project-card.placeholder h3 {
-            font-size: 24px;
-        }
-
-        /* =====================
-           Footer
-        ====================== */
-
-        footer {
-            border-top: 1px solid var(--border);
-
-            padding: 38px 0 60px;
-
-            color: var(--dim);
-
-            font-size: 13px;
-        }
-
-        .footer-inner {
-            display: flex;
-            justify-content: space-between;
-
-            gap: 20px;
-        }
-
-        /* =====================
-           Responsive
-        ====================== */
-
-        @media (max-width: 760px) {
-            .hero {
-                padding: 85px 0 75px;
-            }
-
-            .project-card {
-                grid-template-columns: 1fr;
-                gap: 16px;
-
-                padding: 28px;
-            }
-
-            .project-number {
-                font-size: 46px;
-            }
-
-            .project-arrow {
-                display: none;
-            }
-
-            .section-top,
-            .footer-inner {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .nav-note {
-                display: none;
-            }
-        }
-    </style>
-
+    <link rel="stylesheet" href="./style.css">
 </head>
-
-
 <body>
 
-
-<!-- Navigation -->
-
-<nav>
-
-    <div class="container nav-inner">
-
-        <div class="brand">
-            <span class="brand-dot"></span>
-            CS 280A
-        </div>
-
-        <div class="nav-note">
-            Computational Photography
-        </div>
-
-    </div>
-
-</nav>
-
-
-
-<!-- Hero -->
-
-<header class="hero">
-
-    <div class="container">
-
-        <div class="eyebrow">
-            UC Berkeley · CS 280A
-        </div>
-
-        <h1>
-            <span class="gradient-text">
-                Computational<br>
-                Photography
-            </span>
-        </h1>
-
-        <p class="hero-description">
-            A collection of projects exploring computational photography,
-            image formation, perspective, geometry, and visual computation.
-        </p>
-
-    </div>
-
-</header>
-
-
-
-<!-- Projects -->
-
-<main class="projects">
-
-    <div class="container">
-
-        <div class="section-top">
-
-            <h2>
-                Projects
-            </h2>
-
-            <p>
-                Fall 2026
-            </p>
-
-        </div>
-
-
-        <div class="project-list">
-
-
-            <!-- Project 0 -->
-
-            <a
-                href="./project0/"
-                class="project-card"
-            >
-
-                <div class="project-number">
-                    00
-                </div>
-
-
-                <div class="project-info">
-
-                    <div class="project-label">
-                        Project 0
-                    </div>
-
-                    <h3>
-                        Becoming Friends with Your Camera
-                    </h3>
-
-                    <p>
-                        Exploring how camera position, focal length, and
-                        perspective interact through portrait photography,
-                        architectural perspective compression, and the
-                        classic dolly zoom.
-                    </p>
-
-                </div>
-
-
-                <div class="project-arrow">
-                    →
-                </div>
-
+    <nav class="site-nav">
+        <div class="container nav-inner">
+            <a href="./" class="brand">
+                <span class="brand-mark"></span>
+                <span>CS 280A</span>
             </a>
-
-
-
-            <!-- Future Project 1 -->
-
-            <div class="project-card placeholder">
-
-                <div class="project-number">
-                    01
-                </div>
-
-                <div class="project-info">
-
-                    <div class="project-label">
-                        Project 1
-                    </div>
-
-                    <h3>
-                        Coming Soon
-                    </h3>
-
-                    <p>
-                        Future CS 280A project.
-                    </p>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- Future Project 2 -->
-
-            <div class="project-card placeholder">
-
-                <div class="project-number">
-                    02
-                </div>
-
-                <div class="project-info">
-
-                    <div class="project-label">
-                        Project 2
-                    </div>
-
-                    <h3>
-                        Coming Soon
-                    </h3>
-
-                    <p>
-                        Future CS 280A project.
-                    </p>
-
-                </div>
-
-            </div>
-
-
+            <div class="nav-note">Computational Photography</div>
         </div>
+    </nav>
 
-    </div>
+    <header class="hero hero-home">
+        <div class="container">
+            <div class="eyebrow">UC Berkeley · Fall 2026</div>
+            <h1 class="hero-title">
+                Computational<br>Photography
+            </h1>
+            <p class="hero-text">
+                A portfolio of course projects exploring image formation,
+                perspective, geometry, visual perception, and computational imaging.
+            </p>
+        </div>
+    </header>
 
-</main>
+    <main class="section">
+        <div class="container">
 
+            <div class="section-head simple-head">
+                <div>
+                    <div class="section-kicker">Portfolio</div>
+                    <h2>Projects</h2>
+                </div>
+                <p class="section-subtext">
+                    More projects will be added throughout the semester.
+                </p>
+            </div>
 
+            <div class="project-list">
 
-<!-- Footer -->
+                <a href="./project0/" class="project-card">
+                    <div class="project-number">00</div>
 
-<footer>
+                    <div class="project-body">
+                        <div class="project-label">Project 0</div>
+                        <h3>Becoming Friends with Your Camera</h3>
+                        <p>
+                            Exploring perspective, focal length, camera position,
+                            and the center of projection through portrait photography,
+                            architectural compression, and the dolly zoom.
+                        </p>
+                    </div>
 
-    <div class="container footer-inner">
+                    <div class="project-arrow">→</div>
+                </a>
 
-        <span>
-            CS 280A · Computational Photography
-        </span>
+                <div class="project-card placeholder-card">
+                    <div class="project-number">01</div>
+                    <div class="project-body">
+                        <div class="project-label">Project 1</div>
+                        <h3>Coming Soon</h3>
+                        <p>Future CS 280A project.</p>
+                    </div>
+                </div>
 
-        <span>
-            Portfolio
-        </span>
+                <div class="project-card placeholder-card">
+                    <div class="project-number">02</div>
+                    <div class="project-body">
+                        <div class="project-label">Project 2</div>
+                        <h3>Coming Soon</h3>
+                        <p>Future CS 280A project.</p>
+                    </div>
+                </div>
 
-    </div>
+            </div>
+        </div>
+    </main>
 
-</footer>
-
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <span>CS 280A · Computational Photography</span>
+            <span>Portfolio</span>
+        </div>
+    </footer>
 
 </body>
 </html>
