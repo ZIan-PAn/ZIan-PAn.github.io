@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Project 1: reconstructing color photographs from Prokudin-Gorskii glass plate negatives.">
+  <meta name="color-scheme" content="light">
+  <title>Project 1 · Building Color Images from Glass Plates</title>
+  <style>
+    :root {
+      --bg: #f8f6ef;
+      --bg-soft: #fdfbf6;
+      --surface: #ffffff;
+      --surface-alt: #f6f1e6;
+      --text: #2f3437;
+      --text-soft: #5f696f;
+      --text-muted: #88939a;
+      --accent: #86b6d9;
+      --accent-strong: #5f9cc8;
+      --accent-warm: #f0c36a;
+      --line: rgba(60, 70, 80, 0.10);
+      --line-strong: rgba(60, 70, 80, 0.16);
+      --shadow: 0 16px 40px rgba(90, 92, 100, 0.08);
+      --shadow-hover: 0 18px 44px rgba(90, 92, 100, 0.12);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --max-width: 1160px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+    figure, p { margin: 0; }
+    section { scroll-margin-top: 86px; }
+
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 72px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(248, 246, 239, 0.86);
+      backdrop-filter: blur(16px);
+    }
+
+    .nav-inner {
+      width: min(calc(100% - 48px), var(--max-width));
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #eef2ee;
+      box-shadow: inset 0 0 0 1px rgba(60, 70, 80, 0.06);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .brand-mark::before {
+      left: 4px;
+      top: 7px;
+      background: var(--accent-warm);
+    }
+
+    .brand-mark::after {
+      right: 4px;
+      top: 5px;
+      background: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      transition: color 160ms ease;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:focus-visible { color: var(--accent-strong); }
+
+    .page {
+      overflow: hidden;
+    }
+
+    .hero,
+    .section-inner,
+    .footer-inner {
+      width: min(calc(100% - 48px), var(--max-width));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 118px 0 100px;
+    }
+
+    .eyebrow,
+    .section-index,
+    .image-tag,
+    .note-label,
+    .mini-label,
+    .metric-label,
+    .chip,
+    .table-heading {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .eyebrow {
+      margin-bottom: 22px;
+      color: var(--accent-strong);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+      align-items: end;
+      gap: 72px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      color: #2b3135;
+      font-weight: 700;
+      letter-spacing: -0.065em;
+      line-height: 0.98;
+    }
+
+    h1 {
+      max-width: 860px;
+      font-size: clamp(58px, 8vw, 104px);
+    }
+
+    h2 {
+      max-width: 800px;
+      font-size: clamp(40px, 5vw, 62px);
+    }
+
+    h3 {
+      font-size: 27px;
+      line-height: 1.06;
+    }
+
+    .hero-copy {
+      max-width: 780px;
+    }
+
+    .hero-dek {
+      max-width: 690px;
+      margin-top: 28px;
+      color: var(--text-soft);
+      font-size: 20px;
+      line-height: 1.55;
+    }
+
+    .hero-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      transform: rotate(1.2deg);
+    }
+
+    .hero-card img {
+      width: 100%;
+      aspect-ratio: 1.2 / 1;
+      object-fit: cover;
+    }
+
+    .hero-card-caption {
+      padding: 18px 20px 20px;
+    }
+
+    .hero-card-caption strong {
+      display: block;
+      font-size: 17px;
+      letter-spacing: -0.025em;
+    }
+
+    .hero-card-caption span {
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 76px;
+    }
+
+    .stat {
+      padding: 18px 20px;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--accent-strong);
+      font-size: 30px;
+      letter-spacing: -0.06em;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 7px;
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+
+    .section {
+      padding: 94px 0 110px;
+      border-top: 1px solid var(--line);
+    }
+
+    .section.alt {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .section-heading {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 36px;
+      align-items: start;
+      margin-bottom: 54px;
+    }
+
+    .section-index {
+      padding-top: 8px;
+      color: var(--text-muted);
+    }
+
+    .section-intro {
+      max-width: 780px;
+      margin-top: 19px;
+      color: var(--text-soft);
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 30px;
+    }
+
+    .soft-card,
+    .metric-card,
+    .method-card,
+    .observation,
+    .image-card,
+    .figure-card,
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .soft-card {
+      padding: 28px;
+    }
+
+    .soft-card p + p { margin-top: 16px; }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      align-items: stretch;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-alt);
+    }
+
+    .pipeline-step {
+      position: relative;
+      min-height: 150px;
+      padding: 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.64);
+      border: 1px solid rgba(60, 70, 80, 0.08);
+    }
+
+    .pipeline-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -17px;
+      top: 53px;
+      z-index: 2;
+      color: var(--accent-strong);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .step-number {
+      display: inline-grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .pipeline-step strong {
+      display: block;
+      margin-top: 18px;
+      font-size: 17px;
+      letter-spacing: -0.03em;
+    }
+
+    .pipeline-step span {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .pipeline-step .step-number {
+      display: inline-grid;
+      margin: 0;
+      place-items: center;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      margin: 28px 0 34px;
+    }
+
+    .metric-card {
+      padding: 25px 26px 26px;
+      max-width: 860px;
+    }
+
+    .metric-label { color: var(--accent-strong); }
+
+    .metric-card h3 {
+      margin-top: 12px;
+      font-size: 24px;
+    }
+
+    .metric-card p {
+      margin-top: 10px;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .formula {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 64px;
+      margin-top: 18px;
+      padding: 12px 16px;
+      overflow-x: auto;
+      border-left: 3px solid var(--accent-warm);
+      border-radius: 0 12px 12px 0;
+      background: var(--surface-alt);
+      color: #394249;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .fraction {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 7px;
+      text-align: center;
+      line-height: 1.25;
+    }
+
+    .fraction > span:first-child {
+      padding: 0 10px 5px;
+      border-bottom: 1px solid currentColor;
+    }
+
+    .fraction > span:last-child { padding: 5px 10px 0; }
+
+    .equation-line {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .image-card,
+    .figure-card {
+      overflow: hidden;
+    }
+
+    .image-card img,
+    .figure-card img {
+      width: 100%;
+      aspect-ratio: 1.2 / 1;
+      object-fit: cover;
+      background: #e8e6df;
+    }
+
+    .image-card-body,
+    .figure-card-body {
+      padding: 17px 19px 20px;
+    }
+
+    .image-tag { color: var(--accent-strong); }
+
+    .image-card h3,
+    .figure-card h3 {
+      margin-top: 8px;
+      font-size: 23px;
+    }
+
+    .image-card p,
+    .figure-card p {
+      margin-top: 6px;
+      color: var(--text-soft);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    .chip {
+      padding: 5px 9px;
+      border: 1px solid rgba(95, 156, 200, 0.22);
+      border-radius: 999px;
+      color: #4c87ae;
+      background: #f3f8fb;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+
+    .observation {
+      margin-top: 28px;
+      padding: 23px 26px 25px;
+      border-left: 3px solid var(--accent-warm);
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .note-label { color: #b4872d; }
+
+    .observation p {
+      margin-top: 9px;
+      color: var(--text-soft);
+    }
+
+    .pyramid-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: 30px;
+      align-items: start;
+      margin-bottom: 36px;
+    }
+
+    .pyramid-copy p + p { margin-top: 16px; }
+
+    .level-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      background: var(--surface-alt);
+    }
+
+    .level {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid rgba(95, 156, 200, 0.25);
+      border-radius: 12px;
+      color: #4c87ae;
+      background: #eaf3f8;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .level.large { width: 100%; }
+    .level.medium { width: 78%; }
+    .level.small { width: 56%; }
+    .level.tiny { width: 48%; }
+
+    .level-arrow { color: var(--text-muted); font-size: 18px; line-height: 1; }
+
+    .table-wrap {
+      overflow: hidden;
+      margin-top: 30px;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--text-muted);
+      background: var(--surface-alt);
+      font-size: 10px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { font-weight: 700; }
+    td:not(:first-child) { color: var(--text-soft); }
+
+    .gallery-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 50px 0 20px;
+    }
+
+    .gallery-heading h3 { font-size: 31px; }
+    .gallery-heading p { max-width: 500px; color: var(--text-soft); font-size: 14px; }
+
+    .gallery,
+    .selected-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .tile {
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 22px rgba(90, 92, 100, 0.05);
+    }
+
+    .tile a { display: block; }
+
+    .tile img {
+      width: 100%;
+      aspect-ratio: 1.22 / 1;
+      object-fit: cover;
+      transition: transform 220ms ease;
+    }
+
+    .tile:hover img { transform: scale(1.035); }
+
+    .tile figcaption {
+      padding: 10px 12px 12px;
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .selected-grid {
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 25px;
+    }
+
+    .selected-grid .tile img { aspect-ratio: 1.2 / 1; }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .comparison .figure-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .comparison .figure-card .figure-card-body {
+      flex: 1;
+    }
+
+    .comparison .figure-card img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: auto;
+      object-fit: contain;
+    }
+
+    .wide-figure {
+      margin-top: 20px;
+    }
+
+    .wide-figure img { aspect-ratio: 3.2 / 1; object-fit: cover; }
+
+    .method-overview {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 42px;
+    }
+
+    .method-card {
+      min-height: 184px;
+      padding: 20px 17px;
+      border-radius: var(--radius-md);
+      box-shadow: none;
+    }
+
+    .method-card .method-number {
+      color: var(--accent-strong);
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.06em;
+    }
+
+    .method-card h3 {
+      margin-top: 14px;
+      font-size: 19px;
+      letter-spacing: -0.04em;
+    }
+
+    .method-card p {
+      margin-top: 7px;
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .whistle-detail {
+      padding: 42px 0;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .whistle-detail:first-of-type { border-top: 0; padding-top: 0; }
+
+    .detail-heading {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 36px;
+      align-items: start;
+    }
+
+    .detail-number {
+      color: var(--accent);
+      font-size: 60px;
+      font-weight: 700;
+      letter-spacing: -0.09em;
+      line-height: 0.85;
+    }
+
+    .detail-copy { max-width: 800px; }
+
+    .detail-copy h3 { font-size: clamp(32px, 4vw, 48px); }
+
+    .detail-copy p {
+      margin-top: 15px;
+      color: var(--text-soft);
+    }
+
+    .detail-copy p strong { color: var(--text); }
+
+    .detail-copy .formula { margin-top: 18px; }
+
+    .mini-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .mini-step {
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: var(--surface-alt);
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .detail-figures {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 26px;
+    }
+
+    .detail-figures .figure-card {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-figures .figure-card .figure-card-body {
+      flex: 1;
+    }
+
+    .detail-figures .figure-card img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: auto;
+      object-fit: contain;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    .summary-card {
+      padding: 26px 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    .summary-card h3 { font-size: 25px; }
+    .summary-card p { margin-top: 10px; color: var(--text-soft); }
+
+    .references {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 18px;
+    }
+
+    .references a {
+      color: var(--accent-strong);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+
+    footer {
+      padding: 32px 0 48px;
+      border-top: 1px solid var(--line);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+
+    .footer-inner a { color: var(--text); font-weight: 700; }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .intro-grid,
+      .pyramid-layout { grid-template-columns: 1fr; gap: 34px; }
+      .hero-card { max-width: 620px; margin-left: auto; }
+      .method-overview { grid-template-columns: repeat(3, 1fr); }
+      .gallery { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .nav-inner,
+      .hero,
+      .section-inner,
+      .footer-inner { width: min(calc(100% - 32px), var(--max-width)); }
+      .site-nav { height: auto; min-height: 64px; }
+      .nav-inner { padding: 14px 0; align-items: flex-start; }
+      .nav-links { max-width: 230px; justify-content: flex-end; flex-wrap: wrap; gap: 4px 13px; font-size: 12px; line-height: 1.3; }
+      .hero { padding: 74px 0 70px; }
+      h1 { font-size: clamp(51px, 16vw, 78px); }
+      h2 { font-size: clamp(38px, 12vw, 54px); }
+      .hero-dek { font-size: 17px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); margin-top: 50px; }
+      .stat { padding: 14px 8px 14px 0; }
+      .section { padding: 68px 0 78px; }
+      .section-heading,
+      .detail-heading { grid-template-columns: 1fr; gap: 13px; margin-bottom: 36px; }
+      .section-index { padding-top: 0; }
+      .section-intro { font-size: 16px; }
+      .pipeline { grid-template-columns: 1fr; gap: 9px; }
+      .pipeline-step { min-height: auto; }
+      .pipeline-step:not(:last-child)::after { content: "↓"; right: auto; top: auto; bottom: -18px; left: calc(50% - 7px); }
+      .metrics,
+      .result-grid,
+      .comparison,
+      .detail-figures,
+      .summary-grid { grid-template-columns: 1fr; }
+      .gallery { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .selected-grid { grid-template-columns: 1fr; }
+      .method-overview { grid-template-columns: repeat(2, 1fr); }
+      .detail-number { font-size: 49px; }
+      .gallery-heading { display: block; }
+      .gallery-heading p { margin-top: 8px; }
+      .footer-inner { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="site-nav" aria-label="Primary navigation">
+    <div class="nav-inner">
+      <a class="brand" href="https://zian-pan.github.io/" aria-label="Back to CS 280A portfolio">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>CS 280A</span>
+      </a>
+      <div class="nav-links">
+        <a href="#baseline">Start</a>
+        <a href="#pyramid">Pyramid</a>
+        <a href="#features">Features</a>
+        <a href="#bells">Extras</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">CS 180 / 280A · PROJECT 1</div>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>Building Color Images from Glass Plates</h1>
+          <p class="hero-dek">I used three old filtered views of one scene to make one color picture. I used image alignment and five extra steps.</p>
+        </div>
+        <figure class="hero-card">
+          <a href="media/self_portrait.jpg">
+            <img src="media/self_portrait.jpg" alt="Color image made from a historical glass plate" fetchpriority="high">
+          </a>
+          <figcaption class="hero-card-caption">
+            <strong>Three views, one color picture</strong>
+            <span>Made with image shifts and normalized cross-correlation.</span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="stats-row" aria-label="Project summary">
+        <div class="stat"><strong>14</strong><span>main images</span></div>
+        <div class="stat"><strong>3</strong><span>extra images</span></div>
+        <div class="stat"><strong>5</strong><span>extra methods</span></div>
+        <div class="stat"><strong>1</strong><span>hard case studied</span></div>
+      </div>
+    </header>
+
+    <section class="section" id="baseline">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div class="section-index">01 / START</div>
+          <div>
+            <h2>Making one color image</h2>
+            <p class="section-intro">Each glass plate shows the same scene three times. One view uses a blue filter, one green, and one red. These are gray images, not a normal color photo. The scan puts them one above another in B–G–R order. I split the scan, move the views, and join them.</p>
+          </div>
+        </div>
+
+        <div class="intro-grid">
+          <div class="soft-card">
+            <p><strong>How I align the images.</strong> I use a simple x–y shift. Blue is the reference, so it stays still. For every possible shift, I move the green or red view left, right, up, or down. I compare the moved view with blue and keep the best shift.</p>
+            <p>After I find the two shifts, I use them on the original gray views. I put the red view in the R channel, the green view in G, and the blue view in B. The three channels then make one color image.</p>
+            <p>This model assumes that the plate only moved in the x and y directions. It does not correct rotation, scale, or a bend in the plate. It is simple and fast when the plate stays almost still.</p>
+          </div>
+          <div class="pipeline" aria-label="Reconstruction pipeline">
+            <div class="pipeline-step"><span class="step-number">1</span><strong>Split</strong><span>Find the three gray views in the scan.</span></div>
+            <div class="pipeline-step"><span class="step-number">2</span><strong>Move</strong><span>Test x–y shifts and score each one.</span></div>
+            <div class="pipeline-step"><span class="step-number">3</span><strong>Join</strong><span>Put the aligned views into R, G, and B.</span></div>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <article class="metric-card">
+            <div class="metric-label">Main score</div>
+            <h3>Normalized cross-correlation (NCC)</h3>
+            <p>NCC compares two images after removing their average brightness. For each image, μ is the average pixel value. I subtract μ from every pixel, so each image is centered around zero.</p>
+            <p>The top of the formula adds the matching changes in the two images. The bottom scales the result by the size of the changes in each image. This makes the score less affected by a simple brightness change.</p>
+            <p>For every candidate shift, I calculate one NCC score. A larger score means that the two images have more similar patterns. I keep the shift with the highest score. This works well when the three color views have different brightness.</p>
+            <div class="formula" aria-label="NCC formula">
+              NCC(A, B) =
+              <span class="fraction">
+                <span>Σ (A − μ<sub>A</sub>)(B − μ<sub>B</sub>)</span>
+                <span>√[Σ (A − μ<sub>A</sub>)<sup>2</sup>] · √[Σ (B − μ<sub>B</sub>)<sup>2</sup>]</span>
+              </span>
+            </div>
+          </article>
+        </div>
+
+        <div class="gallery-heading">
+          <h3>Small image test</h3>
+          <p>These three JPEG images are small enough for a direct search. For each green and red view, I test all shifts in the search window and calculate NCC each time. The values below are the final shifts for G and R from B. A positive x moves the view to the right, and a positive y moves it down.</p>
+        </div>
+
+        <div class="result-grid">
+          <article class="image-card">
+            <a href="media/cathedral.jpg"><img src="media/cathedral.jpg" alt="Reconstructed Cathedral image" loading="lazy"></a>
+            <div class="image-card-body"><div class="image-tag">Low-resolution JPEG</div><h3>Cathedral</h3><p>Building edges make the match clear.</p><div class="chips"><span class="chip">G&nbsp; (+2, +5)</span><span class="chip">R&nbsp; (+3, +12)</span></div></div>
+          </article>
+          <article class="image-card">
+            <a href="media/monastery.jpg"><img src="media/monastery.jpg" alt="Reconstructed Monastery image" loading="lazy"></a>
+            <div class="image-card-body"><div class="image-tag">Low-resolution JPEG</div><h3>Monastery</h3><p>The building lines give a stable match.</p><div class="chips"><span class="chip">G&nbsp; (+2, −3)</span><span class="chip">R&nbsp; (+2, +3)</span></div></div>
+          </article>
+          <article class="image-card">
+            <a href="media/tobolsk.jpg"><img src="media/tobolsk.jpg" alt="Reconstructed Tobolsk image" loading="lazy"></a>
+            <div class="image-card-body"><div class="image-tag">Low-resolution JPEG</div><h3>Tobolsk</h3><p>The many lines make the shift easy to check.</p><div class="chips"><span class="chip">G&nbsp; (+3, +3)</span><span class="chip">R&nbsp; (+3, +6)</span></div></div>
+          </article>
+        </div>
+
+        <div class="observation">
+          <div class="note-label">Observation</div>
+          <p>NCC fits this project because the three views do not have the same brightness. After mean subtraction, a bright area and a dark area can still be compared by how they change across the image. The search can focus more on shape and less on a simple brightness change.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="pyramid">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div class="section-index">02 / PYRAMID</div>
+          <div>
+            <h2>How the image pyramid saves time</h2>
+            <p class="section-intro">Large scans have millions of pixels. A wide search at full size is slow because every possible shift needs a new comparison. I make both views smaller and start the search at the smallest level.</p>
+          </div>
+        </div>
+
+        <div class="pyramid-layout">
+          <div class="pyramid-copy soft-card">
+            <p><strong>Start small.</strong> I make both views smaller by one half with area resizing. I keep resizing until the image height is below 300 pixels. This removes some small detail, but the large shapes and edges stay useful. A wide shift search is much faster on a small image.</p>
+            <p>At this smallest level, I search every integer x and y shift from −30 to +30. This is a 61 × 61 search window. The best pair of values becomes the first estimate.</p>
+            <p>At the next larger level, the image is twice as large, so I multiply both parts of the estimate by 2. I then search from 5 pixels below that predicted value to 5 pixels above it in both x and y. This is an 11 × 11 local search around the prediction.</p>
+            <p>I repeat the double-and-refine step at each larger level. The search becomes more exact as the image becomes larger, but it does not need to test the full −30 to +30 window again. When the original size is reached, the last shift is used to align the full image. For a small JPEG image below 300 pixels in height, I skip the extra levels and use the wide search directly.</p>
+          </div>
+          <div class="level-stack" aria-label="Coarse to fine image pyramid">
+            <div class="level tiny">small image / ±30 search</div>
+            <div class="level-arrow">↓</div>
+            <div class="level small">best first shift</div>
+            <div class="level-arrow">↓ × 2</div>
+            <div class="level medium">local ±5 search</div>
+            <div class="level-arrow">↓ × 2</div>
+            <div class="level large">full image / final shift</div>
+          </div>
+        </div>
+
+        <div class="observation">
+          <div class="note-label">Why this works</div>
+          <p>I do not use the outside border when I score a shift. In the search, I leave out a border around the image and compare the center area. This keeps empty or wrapped border pixels from changing the result. I use the same settings for all main images.</p>
+        </div>
+
+        <div class="gallery-heading">
+          <h3>Shifts for all main images</h3>
+          <p>The values are (x, y). They show the shift for G or R from the blue view. I use the same sign rule as the small image test: x is left or right, and y is up or down.</p>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Image</th><th>Green displacement</th><th>Red displacement</th><th>Input</th></tr></thead>
+              <tbody>
+                <tr><td>Church</td><td>(+4, +25)</td><td>(−4, +58)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Emir</td><td>(+24, +49)</td><td>(−481, +385)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Harvesters</td><td>(+17, +60)</td><td>(+13, +124)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Icon</td><td>(+17, +41)</td><td>(+23, +89)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Ilemselga</td><td>(+7, +40)</td><td>(+11, +130)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Melons</td><td>(+11, +82)</td><td>(+13, +178)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Religious painting</td><td>(+3, +28)</td><td>(+7, +68)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Self portrait</td><td>(+29, +79)</td><td>(+37, +176)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Siren</td><td>(−6, +49)</td><td>(−25, +96)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Three generations</td><td>(+14, +53)</td><td>(+11, +112)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Wharf</td><td>(−7, +15)</td><td>(−16, +83)</td><td>TIFF · pyramid</td></tr>
+                <tr><td>Cathedral</td><td>(+2, +5)</td><td>(+3, +12)</td><td>JPEG · single scale</td></tr>
+                <tr><td>Monastery</td><td>(+2, −3)</td><td>(+2, +3)</td><td>JPEG · single scale</td></tr>
+                <tr><td>Tobolsk</td><td>(+3, +3)</td><td>(+3, +6)</td><td>JPEG · single scale</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="gallery-heading">
+          <h3>All main results</h3>
+          <p>Click an image to see the full local result.</p>
+        </div>
+
+        <div class="gallery">
+          <figure class="tile"><a href="media/church.jpg"><img src="media/church.jpg" alt="Church reconstruction" loading="lazy"></a><figcaption>Church</figcaption></figure>
+          <figure class="tile"><a href="media/emir.jpg"><img src="media/emir.jpg" alt="Emir reconstruction" loading="lazy"></a><figcaption>Emir</figcaption></figure>
+          <figure class="tile"><a href="media/harvesters.jpg"><img src="media/harvesters.jpg" alt="Harvesters reconstruction" loading="lazy"></a><figcaption>Harvesters</figcaption></figure>
+          <figure class="tile"><a href="media/icon.jpg"><img src="media/icon.jpg" alt="Icon reconstruction" loading="lazy"></a><figcaption>Icon</figcaption></figure>
+          <figure class="tile"><a href="media/ilemselga.jpg"><img src="media/ilemselga.jpg" alt="Ilemselga reconstruction" loading="lazy"></a><figcaption>Ilemselga</figcaption></figure>
+          <figure class="tile"><a href="media/melons.jpg"><img src="media/melons.jpg" alt="Melons reconstruction" loading="lazy"></a><figcaption>Melons</figcaption></figure>
+          <figure class="tile"><a href="media/religous_painting.jpg"><img src="media/religous_painting.jpg" alt="Religious painting reconstruction" loading="lazy"></a><figcaption>Religious painting</figcaption></figure>
+          <figure class="tile"><a href="media/self_portrait.jpg"><img src="media/self_portrait.jpg" alt="Self portrait reconstruction" loading="lazy"></a><figcaption>Self portrait</figcaption></figure>
+          <figure class="tile"><a href="media/siren.jpg"><img src="media/siren.jpg" alt="Siren reconstruction" loading="lazy"></a><figcaption>Siren</figcaption></figure>
+          <figure class="tile"><a href="media/three_generations.jpg"><img src="media/three_generations.jpg" alt="Three generations reconstruction" loading="lazy"></a><figcaption>Three generations</figcaption></figure>
+          <figure class="tile"><a href="media/wharf.jpg"><img src="media/wharf.jpg" alt="Wharf reconstruction" loading="lazy"></a><figcaption>Wharf</figcaption></figure>
+          <figure class="tile"><a href="media/cathedral.jpg"><img src="media/cathedral.jpg" alt="Cathedral reconstruction" loading="lazy"></a><figcaption>Cathedral</figcaption></figure>
+          <figure class="tile"><a href="media/monastery.jpg"><img src="media/monastery.jpg" alt="Monastery reconstruction" loading="lazy"></a><figcaption>Monastery</figcaption></figure>
+          <figure class="tile"><a href="media/tobolsk.jpg"><img src="media/tobolsk.jpg" alt="Tobolsk reconstruction" loading="lazy"></a><figcaption>Tobolsk</figcaption></figure>
+        </div>
+
+        <div class="gallery-heading">
+          <h3>Three extra images</h3>
+          <p>These three images are my extra choices. The colored scan borders are still there.</p>
+        </div>
+
+        <div class="selected-grid">
+          <figure class="tile"><a href="media/master-pnp-prok-00100-00166u.jpg"><img src="media/master-pnp-prok-00100-00166u.jpg" alt="Additional selected image A" loading="lazy"></a><figcaption>Selected image A · G (+18, +26) · R (+35, +121)</figcaption></figure>
+          <figure class="tile"><a href="media/master-pnp-prok-00200-00201u.jpg"><img src="media/master-pnp-prok-00200-00201u.jpg" alt="Additional selected image B" loading="lazy"></a><figcaption>Selected image B · G (−32, +37) · R (+7, +97)</figcaption></figure>
+          <figure class="tile"><a href="media/master-pnp-prok-00200-00296u.jpg"><img src="media/master-pnp-prok-00200-00296u.jpg" alt="Additional selected image C" loading="lazy"></a><figcaption>Selected image C · G (+1, +11) · R (+1, +73)</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div class="section-index">03 / BETTER FEATURES</div>
+          <div>
+            <h2>Why I use edges</h2>
+            <p class="section-intro">The Emir image shows a problem with raw pixels. The blue robe can be bright in one view and dark in another, even though its edges stay in the same place. A pixel score can then prefer a wrong shift.</p>
+          </div>
+        </div>
+
+        <div class="soft-card">
+          <p><strong>Problem.</strong> Raw NCC works best when the same object has similar brightness in all three views. This is not true for strong colors, such as Emir’s blue robe. A blue robe may be bright in the blue view but much darker in the red view.</p>
+          <p><strong>My change.</strong> I use the Sobel gradient. Sobel looks at a small group of nearby pixels. Its x part measures a left-to-right change, and its y part measures an up-and-down change. Large values show an edge or a strong texture change.</p>
+          <p>I combine the two parts into one gradient size for every pixel. I make one gradient image for B, G, and R. I then use the same pyramid search on these three gradient images. The search uses edge strength to find the shifts, instead of using raw brightness alone.</p>
+          <div class="formula equation-line" aria-label="Gradient magnitude formula">G = √(G<sub>x</sub><sup>2</sup> + G<sub>y</sub><sup>2</sup>)</div>
+          <p><strong>Why it helps.</strong> A bright-to-dark change can still have a strong edge. The robe, turban, doors, and floor can line up even when their brightness is different. After finding the shifts, I apply those shifts to the original gray views to make the final color image. The gradient image is only used for matching.</p>
+        </div>
+
+        <div class="comparison">
+          <article class="figure-card">
+            <a href="media/emir.jpg"><img src="media/emir.jpg" alt="Emir result from raw pixel NCC, showing strong color ghosting" loading="lazy"></a>
+            <div class="figure-card-body"><div class="image-tag">Raw-pixel result</div><h3>Wrong red shift</h3><p>The red view gets a very large shift (−481, +385). This is far from the shifts of most other images. The two people become color ghosts.</p></div>
+          </article>
+          <article class="figure-card">
+            <a href="media/emir_gradient.jpg"><img src="media/emir_gradient.jpg" alt="Emir result after gradient-feature alignment" loading="lazy"></a>
+            <div class="figure-card-body"><div class="image-tag">Gradient result</div><h3>Better red shift</h3><p>The new red shift is (+40, +107). The two people are much closer together, so the portrait has less color ghosting.</p></div>
+          </article>
+        </div>
+
+        <figure class="figure-card wide-figure">
+          <a href="media/emir_gradient_map.jpg"><img src="media/emir_gradient_map.jpg" alt="Side-by-side gradient magnitude visualizations for Emir's blue, green, and red exposures" loading="lazy"></a>
+          <figcaption class="figure-card-body"><div class="image-tag">Gradient views</div><h3>The same edges appear in all views</h3><p>The three gradient views show the same main edges.</p></figcaption>
+        </figure>
+
+        <div class="observation">
+          <div class="note-label">What failed</div>
+          <p>Emir is the clearest failure of the raw-pixel search. The problem is the brightness, not only the shift model. The gradient search changes the input used to measure a match, so it fixes much of this problem. It does not remove all scan marks, and it cannot fix movement that is not a simple x–y shift.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="bells">
+      <div class="section-inner">
+        <div class="section-heading">
+          <div class="section-index">04 / EXTRA METHODS</div>
+          <div>
+            <h2>Five extra methods</h2>
+            <p class="section-intro">These five methods fix different problems. Some change the shift search, and some change the image after it is made. I test each one from the same original color image, so I can see what each method changes.</p>
+          </div>
+        </div>
+
+        <div class="method-overview" aria-label="Five bells and whistles">
+          <article class="method-card"><div class="method-number">01</div><h3>Better features</h3><p>Use edges instead of raw brightness.</p></article>
+          <article class="method-card"><div class="method-number">02</div><h3>Automatic cropping</h3><p>Find the useful image area.</p></article>
+          <article class="method-card"><div class="method-number">03</div><h3>Color mapping</h3><p>Use the display range better.</p></article>
+          <article class="method-card"><div class="method-number">04</div><h3>White balance</h3><p>Reduce a color cast.</p></article>
+          <article class="method-card"><div class="method-number">05</div><h3>Local contrast</h3><p>Show more local detail.</p></article>
+        </div>
+
+        <article class="whistle-detail">
+          <div class="detail-heading">
+            <div class="detail-number">01</div>
+            <div class="detail-copy">
+              <h3>Better features, used in alignment</h3>
+              <p><strong>Why it is useful.</strong> Raw brightness is not always a good way to compare the three views. A colored object can change brightness after a different filter is used, even when the object did not move.</p>
+              <p>I use the Sobel gradient to make a new image that shows edges and texture changes. I make this image for each of the three views. I then find the shifts with NCC and the image pyramid.</p>
+              <p>After the shifts are found, I do not use the gradient image as the final color image. I move the original gray views with the new shifts and use them as R, G, and B. This keeps the color image while using a better signal for alignment.</p>
+            </div>
+          </div>
+          <div class="detail-figures">
+            <article class="figure-card"><a href="media/emir.jpg"><img src="media/emir.jpg" alt="Emir raw-pixel alignment used as the better-features before image" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">Before</div><h3>Raw brightness</h3><p>Brightness can mislead the search.</p></div></article>
+            <article class="figure-card"><a href="media/emir_gradient.jpg"><img src="media/emir_gradient.jpg" alt="Emir gradient-feature alignment used as the after image" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">After</div><h3>Edge strength</h3><p>Edges give a better shift signal.</p></div></article>
+          </div>
+        </article>
+
+        <article class="whistle-detail">
+          <div class="detail-heading">
+            <div class="detail-number">02</div>
+            <div class="detail-copy">
+              <h3>Automatic cropping</h3>
+              <p><strong>Problem.</strong> After alignment, the plate can still have black, white, or colored borders. A fixed crop is not good because each image has a different border. A wide border can also make the color image look less clean.</p>
+              <p><strong>Method.</strong> I use a Sobel filter on each color channel. It finds places where the image changes fast. For each pixel, I keep the strongest x and y response from the three channels. This gives one edge map that can show a border even if the border is strong in only one color.</p>
+              <p>I first set an edge threshold from the image. Then I check every column and row near the four outer sides. For a column, I count how many pixels are stronger than the threshold. This fraction is the column support. I do the same for rows. A real border should have strong support across much of a row or column, not just one small mark.</p>
+              <p>I search only in the outer 12% of the image. I accept a possible border when its support is above 60%. For the left and top, I choose the supported line farthest inside. For the right and bottom, I choose the supported line nearest the inside. I then add a small 1% safety margin to remove the colored edge too.</p>
+              <div class="formula equation-line" aria-label="Border support formula">support(x) = strong edge pixels in column x / all pixels in column x</div>
+              <div class="mini-steps"><span class="mini-step">color channels</span><span class="mini-step">Sobel gradients</span><span class="mini-step">row / column support</span><span class="mini-step">inside crop</span></div>
+              <p><strong>Limit.</strong> Some marks on the plate also look like edges, but they do not continue across a full row or column. The support test reduces this problem, but it is not perfect. The crop removes the large side borders, while a thin top or bottom edge can remain.</p>
+            </div>
+          </div>
+          <div class="detail-figures">
+            <article class="figure-card"><a href="media/self_portrait_original.jpg"><img src="media/self_portrait_original.jpg" alt="Self portrait before automatic cropping, with colored scan borders" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">Before</div><h3>Aligned image</h3><p>The colored side borders are still visible.</p></div></article>
+            <article class="figure-card"><a href="media/self_portrait_crop.jpg"><img src="media/self_portrait_crop.jpg" alt="Self portrait after automatic cropping" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">After</div><h3>Cropped image</h3><p>The large side borders are smaller.</p></div></article>
+          </div>
+        </article>
+
+        <article class="whistle-detail">
+          <div class="detail-heading">
+            <div class="detail-number">03</div>
+            <div class="detail-copy">
+              <h3>Better color mapping</h3>
+              <p><strong>Problem.</strong> I first put the three old views into modern R, G, and B. This is a useful start, but one view may use only part of the display range. The result can look flat if most pixels are packed into a small range.</p>
+              <p><strong>Method.</strong> For each channel, I sort its pixel values. P<sub>1</sub> is the value near the bottom 1% of the pixels, and P<sub>99</sub> is the value near the top 1%. I use these two values as the useful range.</p>
+              <p>I map P<sub>1</sub> to 0 and P<sub>99</sub> to 1. Values below P<sub>1</sub> become 0, and values above P<sub>99</sub> become 1. This is called clipping. A few very dark or very bright scan pixels then have less effect on the whole image.</p>
+              <div class="formula" aria-label="Percentile color mapping formula">I′ = clip(<span class="fraction"><span>I − P<sub>1</sub>(I)</span><span>P<sub>99</sub>(I) − P<sub>1</sub>(I)</span></span>, 0, 1)</div>
+              <p><strong>Limit.</strong> This changes the display values, but it does not find the true old filter colors. It can also make a channel look too strong if its useful range is very small. A color chart would be needed for real color correction.</p>
+            </div>
+          </div>
+          <div class="detail-figures">
+            <article class="figure-card"><a href="media/wharf_original.jpg"><img src="media/wharf_original.jpg" alt="Wharf reconstruction before percentile color mapping" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">Before</div><h3>Direct channel values</h3><p>Each view uses its original display range.</p></div></article>
+            <article class="figure-card"><a href="media/wharf_color_mapping.jpg"><img src="media/wharf_color_mapping.jpg" alt="Wharf reconstruction after percentile color mapping" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">After</div><h3>New channel range</h3><p>Each channel uses more of the display range.</p></div></article>
+          </div>
+        </article>
+
+        <article class="whistle-detail">
+          <div class="detail-heading">
+            <div class="detail-number">04</div>
+            <div class="detail-copy">
+              <h3>Automatic white balance</h3>
+              <p><strong>Problem.</strong> The image can look too red, green, or blue even when it is aligned. The three old filters do not have the same average response, so direct channel assignment can leave a global color cast.</p>
+              <p><strong>Method.</strong> I find the average value of R, G, and B. I use their average as gray. Then I scale each channel toward that gray value. A channel with a low mean is made brighter, and a channel with a high mean is made darker.</p>
+              <p>The scale for a channel is its target gray mean divided by its current mean. I apply this one scale to every pixel in that channel. I then clip values outside 0–1, so the result stays in the valid image range.</p>
+              <div class="formula equation-line" aria-label="Gray world formula">channel scale = gray mean / channel mean</div>
+              <p><strong>Limit.</strong> Gray world is only a guess. It assumes that the whole scene is close to neutral on average. A real green forest or a blue sky can be changed even when its color is real.</p>
+            </div>
+          </div>
+          <div class="detail-figures">
+            <article class="figure-card"><a href="media/wharf_original.jpg"><img src="media/wharf_original.jpg" alt="Wharf reconstruction before automatic white balance" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">Before</div><h3>Before balance</h3><p>The three channel averages are not equal.</p></div></article>
+            <article class="figure-card"><a href="media/wharf_white_balance.jpg"><img src="media/wharf_white_balance.jpg" alt="Wharf reconstruction after gray-world white balance" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">After</div><h3>After balance</h3><p>The global color cast is softer.</p></div></article>
+          </div>
+        </article>
+
+        <article class="whistle-detail">
+          <div class="detail-heading">
+            <div class="detail-number">05</div>
+            <div class="detail-copy">
+              <h3>Automatic contrasting with CLAHE</h3>
+              <p><strong>Problem.</strong> One global contrast change may not show both dark and bright parts well. If I increase contrast for a dark area, a bright sky may lose detail. If I protect the sky, the dark area may stay flat.</p>
+              <p><strong>Method.</strong> I first change the image from RGB to HSV. HSV separates color from brightness. I use CLAHE only on the V, or value, channel, so the color and saturation are not changed directly.</p>
+              <p>CLAHE divides the V channel into an 8 × 8 grid of small tiles. It makes a histogram for each tile and uses the local cumulative histogram to spread the values. It also clips very tall histogram bins, so one small group of pixels cannot create an extreme contrast change. Neighboring tiles are joined smoothly, which reduces hard blocks.</p>
+              <p>After this local contrast step, I put the changed V channel back with the original H and S channels. I then change the image from HSV back to RGB.</p>
+              <div class="formula equation-line" aria-label="Histogram equalization formula">new value = (L − 1) × CDF(old value)</div>
+              <div class="mini-steps"><span class="mini-step">RGB → HSV</span><span class="mini-step">change V only</span><span class="mini-step">HSV → RGB</span></div>
+              <p><strong>Limit.</strong> It can also make dust and small scan marks easier to see. It helps visibility in local areas, but it is not full photo restoration and it cannot repair missing image detail.</p>
+            </div>
+          </div>
+          <div class="detail-figures">
+            <article class="figure-card"><a href="media/wharf_original.jpg"><img src="media/wharf_original.jpg" alt="Wharf reconstruction before CLAHE" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">Before</div><h3>Before local contrast</h3><p>Some dark areas have little detail.</p></div></article>
+            <article class="figure-card"><a href="media/wharf_clahe.jpg"><img src="media/wharf_clahe.jpg" alt="Wharf reconstruction after CLAHE on HSV value channel" loading="lazy"></a><div class="figure-card-body"><div class="image-tag">After</div><h3>After local contrast</h3><p>More local texture is visible.</p></div></article>
+          </div>
+        </article>
+
+        <div class="observation">
+          <div class="note-label">One test at a time</div>
+          <p>Each method starts directly from an unadjusted reconstruction without chaining them together. Cropping is tested on the self-portrait, while color mapping, white balance, and CLAHE are tested on the wharf. This lets me compare each method by itself.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>CS 180 / 280A · Project 1</span>
+      <a href="https://zian-pan.github.io/">CS 280A · Computational Photography</a>
+    </div>
+  </footer>
+</body>
+</html>
