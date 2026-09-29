@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CS 280A Project 2 on filters, image frequencies, hybrid images, and blending across scales.">
+  <title>CS 280A Project 2: Fun with Filters and Frequencies</title>
+  <style>
+    :root {
+      --bg: #f8f6ef;
+      --bg-soft: #fdfbf6;
+      --surface: #fff;
+      --surface-alt: #f6f1e6;
+      --text: #2f3437;
+      --text-soft: #5f696f;
+      --text-muted: #88939a;
+      --accent: #86b6d9;
+      --accent-strong: #5f9cc8;
+      --accent-warm: #f0c36a;
+      --line: rgba(60, 70, 80, .10);
+      --line-strong: rgba(60, 70, 80, .16);
+      --shadow: 0 16px 40px rgba(90, 92, 100, .08);
+      --shadow-hover: 0 18px 44px rgba(90, 92, 100, .12);
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --max-width: 1160px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 86px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; }
+    a { color: inherit; }
+    p { color: var(--text-soft); margin: 0 0 1rem; }
+    h1, h2, h3, h4 { color: #2b3135; margin: 0; line-height: 1.08; letter-spacing: -.045em; }
+    h2 { font-size: clamp(2.35rem, 5vw, 3.55rem); }
+    h3 { font-size: clamp(1.45rem, 2.5vw, 1.9rem); }
+    h4 { font-size: 1.15rem; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--line);
+      background: rgba(248, 246, 239, .88);
+      backdrop-filter: blur(16px);
+    }
+    .nav-inner {
+      width: min(100%, var(--max-width));
+      min-height: 70px;
+      padding: 0 20px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: .95rem;
+      font-weight: 750;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      position: relative;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px var(--line);
+    }
+    .brand-mark::before, .brand-mark::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      top: 7px;
+    }
+    .brand-mark::before { left: 4px; background: var(--accent); }
+    .brand-mark::after { right: 4px; background: var(--accent-warm); opacity: .9; }
+    .nav-links { display: flex; gap: 22px; align-items: center; }
+    .nav-links a {
+      color: var(--text-soft);
+      text-decoration: none;
+      font-size: .88rem;
+      transition: color .2s ease;
+    }
+    .nav-links a:hover, .nav-links a:focus-visible { color: var(--accent-strong); }
+
+    .hero {
+      width: min(100%, var(--max-width));
+      padding: 78px 20px 64px;
+      margin: 0 auto;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .eyebrow, .section-label, .figure-label {
+      color: #7e9db4;
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .19em;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      max-width: 780px;
+      margin: 18px 0 20px;
+      font-size: clamp(3.25rem, 8.8vw, 6.5rem);
+      line-height: .94;
+      letter-spacing: -.085em;
+    }
+    .hero-copy > p { max-width: 610px; font-size: 1.08rem; }
+
+    .section {
+      padding: 70px 20px 82px;
+      scroll-margin-top: 68px;
+    }
+    .section.soft { background: var(--bg-soft); border-top: 1px solid rgba(60,70,80,.04); border-bottom: 1px solid rgba(60,70,80,.04); }
+    .section-inner { width: min(100%, var(--max-width)); margin: 0 auto; }
+    .section-head { max-width: 800px; margin-bottom: 32px; }
+    .section-head .section-label { display: inline-block; margin-bottom: 12px; }
+    .section-head h2 { margin-bottom: 16px; }
+    .section-head p { max-width: 720px; font-size: 1.02rem; }
+    .subsection { margin-top: 48px; }
+    .subsection:first-of-type { margin-top: 0; }
+    .subhead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+    .subhead .number { color: var(--accent-strong); font-size: .8rem; font-weight: 800; letter-spacing: .12em; white-space: nowrap; }
+    .subsection > p { max-width: 850px; }
+    .card, .method-card, .image-card, .note-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .method-card, .note-card { padding: clamp(20px, 3vw, 30px); }
+    .method-card h3, .note-card h3 { margin-bottom: 12px; }
+    .method-card p:last-child, .note-card p:last-child { margin-bottom: 0; }
+    .method-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin: 22px 0; }
+    .callout {
+      margin: 18px 0;
+      padding: 18px 20px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 14px 14px 0;
+      background: var(--surface-alt);
+      color: var(--text-soft);
+    }
+    .callout strong { color: var(--text); }
+    .formula {
+      margin: 16px 0;
+      padding: 16px 18px;
+      overflow-x: auto;
+      border: 1px solid rgba(134,182,217,.24);
+      border-radius: 14px;
+      background: #f8fbfd;
+      color: #263640;
+      text-align: center;
+    }
+    .formula math { font-size: 1.15rem; }
+    .formula-caption { margin: 8px 0 0; color: var(--text-muted); font-size: .82rem; text-align: center; }
+    .image-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; align-items: start; }
+    .image-grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .image-grid.fullrows { grid-template-columns: minmax(0,1fr); }
+    .image-card { min-width: 0; padding: 10px; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
+    .image-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .image-card img { display: block; width: 100%; height: auto; border-radius: 11px; background: #eee; }
+    .image-card .contained { max-height: 480px; object-fit: contain; background: #eeece5; }
+    .image-card figcaption { padding: 12px 8px 6px; }
+    .image-card figcaption strong { display: block; margin-bottom: 3px; color: var(--text); font-size: .95rem; }
+    .image-card figcaption span { color: var(--text-muted); font-size: .83rem; line-height: 1.45; }
+    .image-link { display: block; text-decoration: none; }
+    .single-figure { max-width: 980px; margin: 20px auto; }
+    .single-figure { padding: 12px; }
+    .single-figure img { max-height: 780px; object-fit: contain; background: #eceae4; }
+    .wide-figure img { width: 100%; }
+    .portrait-card { max-width: 660px; }
+    .source-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 780px; margin: 18px auto; }
+    .source-row .image-card img { max-height: 420px; object-fit: contain; background: #eeece5; }
+    .comparison-row { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr); gap: 18px; align-items: start; }
+    .comparison-row .image-card img { max-height: 520px; object-fit: contain; background: #eeece5; }
+    details {
+      margin: 18px 0;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+    }
+    summary {
+      padding: 15px 18px;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    details[open] > .details-body { padding: 0 18px 18px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+    .chip { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--text-soft); font-size: .78rem; }
+    .two-step { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 18px 0; }
+    .step { display: flex; gap: 14px; padding: 18px; border-radius: 16px; background: var(--surface-alt); }
+    .step .step-no { flex: 0 0 30px; height: 30px; border-radius: 50%; background: #fff; color: var(--accent-strong); font-weight: 800; text-align: center; line-height: 30px; }
+    .step strong { display: block; color: var(--text); }
+    .step p { margin: 4px 0 0; font-size: .9rem; }
+    .small-note { color: var(--text-muted); font-size: .84rem; }
+    .learn-card {
+      display: grid;
+      grid-template-columns: minmax(0,.75fr) minmax(0,1.25fr);
+      gap: 28px;
+      padding: clamp(22px,4vw,42px);
+      border-radius: 26px;
+      background: #eaf2f6;
+      border: 1px solid rgba(95,156,200,.15);
+    }
+    .learn-card h2 { font-size: clamp(2rem,4vw,3rem); }
+    footer { padding: 26px 20px 38px; color: var(--text-muted); font-size: .82rem; }
+    .footer-inner { width: min(100%, var(--max-width)); margin: 0 auto; display: flex; justify-content: space-between; gap: 18px; }
+
+    @media (max-width: 860px) {
+      .image-grid.three { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 640px) {
+      .nav-inner { min-height: 62px; padding: 0 15px; }
+      .nav-links { gap: 13px; }
+      .nav-links a { font-size: .75rem; }
+      .brand { font-size: .84rem; }
+      .hero { padding: 58px 16px 48px; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero h1 { max-width: 520px; font-size: clamp(3rem, 14vw, 4.8rem); }
+      .section { padding: 56px 16px 64px; }
+      .method-grid, .image-grid, .image-grid.three, .two-step, .source-row, .comparison-row, .learn-card { grid-template-columns: 1fr; }
+      .image-card .contained { max-height: 420px; }
+      .footer-inner { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="site-nav" aria-label="Primary navigation">
+    <div class="nav-inner">
+      <a class="brand" href="https://zian-pan.github.io/" aria-label="Back to the CS 280A portfolio">
+        <span class="brand-mark" aria-hidden="true"></span><span>CS 280A</span>
+      </a>
+      <div class="nav-links">
+        <a href="#start">Start</a>
+        <a href="#filters">Filters</a>
+        <a href="#sharpen">Sharpen</a>
+        <a href="#hybrids">Hybrids</a>
+        <a href="#blend">Blend</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero" id="start">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow">CS 280A · PROJECT 2</div>
+          <h1>Fun with Filters and Frequencies</h1>
+          <p>I use small filters to find edges. Then I use image frequencies to sharpen photos, combine images, and blend their borders.</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="section soft" id="filters">
+      <div class="section-inner">
+        <div class="section-head">
+          <span class="section-label">PART 1 / FILTERS AND EDGES</span>
+          <h2>Small filters reveal changes.</h2>
+          <p>Each filter uses nearby pixels to make a new value. A box filter finds the average. A derivative filter responds where brightness changes.</p>
+        </div>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">1.1</span><h3>Build convolution from scratch</h3></div>
+          <p>I used a grayscale portrait to compare two NumPy methods with <code>scipy.signal.convolve2d</code>. Both methods flip the kernel, add a border of zeros, and keep the output the same size as the input.</p>
+          <div class="formula" aria-label="Convolution formula">
+            <math display="block">
+              <mrow>
+                <mi>O</mi><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo><mo>=</mo>
+                <munderover><mo>∑</mo><mrow><mi>u</mi><mo>=</mo><mo>−</mo><mi>r</mi></mrow><mi>r</mi></munderover>
+                <munderover><mo>∑</mo><mrow><mi>v</mi><mo>=</mo><mo>−</mo><mi>s</mi></mrow><mi>s</mi></munderover>
+                <mi>I</mi><mo>(</mo><mi>x</mi><mo>−</mo><mi>u</mi><mo>,</mo><mi>y</mi><mo>−</mo><mi>v</mi><mo>)</mo>
+                <mi>K</mi><mo>(</mo><mi>u</mi><mo>,</mo><mi>v</mi><mo>)</mo>
+              </mrow>
+            </math>
+            <p class="formula-caption">I center the kernel on each output pixel. I treat pixels beyond the image edge as zero.</p>
+          </div>
+          <div class="callout"><strong>Speed and image borders.</strong> The first method uses four loops. It performs every multiplication and addition in Python, so it takes longer as the image or filter grows. The second method uses two loops and lets NumPy do the math for each image patch. SciPy performs the same convolution in optimized code. Each method adds a border of zeros. Their results look the same, with only tiny rounding differences.</div>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part1_1/two_loop.png"><img src="media/results/part1_1/two_loop.png" alt="Portrait, blurred result, and edge results in two directions" loading="lazy"></a><figcaption><strong>Convolution results</strong><span>All three methods give the same visible result. This figure shows the shared blur and edge outputs.</span></figcaption></figure>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">1.2</span><h3>Directional differences reveal edges</h3></div>
+          <p>I applied D<sub>x</sub> and D<sub>y</sub> to the cameraman image. D<sub>x</sub> marks brightness changes from left to right. D<sub>y</sub> marks changes from top to bottom. Together they show edge strength.</p>
+          <div class="formula" aria-label="Gradient strength and edge threshold formulas">
+            <math display="block"><mrow><mi>M</mi><mo>=</mo><msqrt><mrow><msup><msub><mi>I</mi><mi>x</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>I</mi><mi>y</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>
+            <math display="block"><mrow><mi>E</mi><mo>(</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>)</mo><mo>=</mo><mo>{</mo><mtable><mtr><mtd><mn>1</mn></mtd><mtd><mi>M</mi><mo>></mo><mi>T</mi></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mi>M</mi><mo>≤</mo><mi>T</mi></mtd></mtr></mtable></mrow></math>
+            <p class="formula-caption">The threshold T keeps only stronger changes in the edge map.</p>
+          </div>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part1_2/partial_derivatives.png"><img src="media/results/part1_2/partial_derivatives.png" alt="Cameraman image and the edge response in two directions" loading="lazy"></a><figcaption><strong>Partial derivatives</strong><span>The two directions respond to different edge orientations.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part1_2/gradient_thresholds.png"><img src="media/results/part1_2/gradient_thresholds.png" alt="Gradient strength and edge maps for four threshold values" loading="lazy"></a><figcaption><strong>Choosing a threshold</strong><span>I tested four values. At 40/255, the main figure stays clear and much of the background noise disappears.</span></figcaption></figure>
+          </div>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part1_2/final_edge.png"><img src="media/results/part1_2/final_edge.png" alt="Final edge map of the cameraman at threshold 40 out of 255" loading="lazy"></a><figcaption><strong>Chosen edge map · T = 40/255</strong><span>I chose this value by eye. A lower threshold keeps faint edges, but also keeps more noise.</span></figcaption></figure>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">1.3</span><h3>Smooth the image before finding edges</h3></div>
+          <p>Raw differences also respond to small noise. I first blurred the image with a 9 × 9 Gaussian filter at σ = 2. Then I compared two methods: blur the image before taking a derivative, or use one filter that combines the blur and derivative. This second method uses a derivative of Gaussian, or DoG, filter.</p>
+          <div class="formula" aria-label="Gaussian blur and derivative of Gaussian equations">
+            <math display="block"><mrow><mi>G</mi><mo>=</mo><mi>g</mi><mo>×</mo><msup><mi>g</mi><mi>T</mi></msup></mrow></math>
+            <math display="block"><mrow><msub><mi>D</mi><mi>x</mi></msub><mo>∗</mo><mo>(</mo><mi>G</mi><mo>∗</mo><mi>I</mi><mo>)</mo><mo>=</mo><mo>(</mo><msub><mi>D</mi><mi>x</mi></msub><mo>∗</mo><mi>G</mi><mo>)</mo><mo>∗</mo><mi>I</mi></mrow></math>
+            <math display="block"><mrow><msub><mi>D</mi><mi>y</mi></msub><mo>∗</mo><mo>(</mo><mi>G</mi><mo>∗</mo><mi>I</mi><mo>)</mo><mo>=</mo><mo>(</mo><msub><mi>D</mi><mi>y</mi></msub><mo>∗</mo><mi>G</mi><mo>)</mo><mo>∗</mo><mi>I</mi></mrow></math>
+            <p class="formula-caption">I built G from <code>cv2.getGaussianKernel</code> and its transpose. The two DoG filters are D<sub>x</sub> ∗ G and D<sub>y</sub> ∗ G.</p>
+          </div>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part1_3/gaussian_blur.png"><img src="media/results/part1_3/gaussian_blur.png" alt="Cameraman image beside its blurred version" loading="lazy"></a><figcaption><strong>Gaussian blur</strong><span>The blur reduces small brightness changes before I find edges.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part1_3/blur_then_derivative.png"><img src="media/results/part1_3/blur_then_derivative.png" alt="Gradient strength and edges after Gaussian blur" loading="lazy"></a><figcaption><strong>Blur, then find edges</strong><span>Fewer weak marks remain in the background.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part1_3/dog_filters.png"><img src="media/results/part1_3/dog_filters.png" alt="Gaussian filters that find edges in two directions" loading="lazy"></a><figcaption><strong>DoG filters</strong><span>Each filter smooths the image and measures change in one direction.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part1_3/dog_direct.png"><img src="media/results/part1_3/dog_direct.png" alt="Gradient strength and edge maps from the DoG filters" loading="lazy"></a><figcaption><strong>Same edge map</strong><span>Blurring before the derivative and applying the combined DoG filter give the same edge map. Both use the same output mode and zero padding.</span></figcaption></figure>
+          </div>
+          <div class="callout"><strong>What changed?</strong> Compared with the raw differences in 1.2, smoothing removes small background marks and keeps the cameraman outline and camera clear. Blurring before the derivative and using the combined DoG filter give the same edge map here. Both paths use the same output mode and zero padding.</div>
+          <div class="method-card">
+            <h3>Extra: Color shows edge direction</h3>
+            <p>I mapped each edge direction to a color. I use the signs of I<sub>x</sub> and I<sub>y</sub> to choose the correct angle. Hue shows direction, and brightness shows edge strength.</p>
+            <div class="formula" aria-label="Color shows edge direction and brightness shows edge strength">
+              <math display="block"><mrow><mi>h</mi><mo>=</mo><mfrac><mrow><mi>θ</mi><mo>+</mo><mi>π</mi></mrow><mrow><mn>2</mn><mi>π</mi></mrow></mfrac></mrow></math>
+              <math display="block"><mrow><mi>V</mi><mo>=</mo><mfrac><mi>M</mi><msub><mi>M</mi><mi>max</mi></msub></mfrac></mrow></math>
+            </div>
+            <figure class="image-card single-figure"><a class="image-link" href="media/results/part1_2/gradient_orientation.png"><img src="media/results/part1_2/gradient_orientation.png" alt="Edge direction shown with hue and gradient strength shown with brightness" loading="lazy"></a><figcaption><strong>Edge direction</strong><span>Each color shows an edge direction. Brighter areas mark stronger edges.</span></figcaption></figure>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="sharpen">
+      <div class="section-inner">
+        <div class="section-head">
+          <span class="section-label">PART 2.1 / SHARPENING</span>
+          <h2>Bring fine detail back.</h2>
+          <p>A Gaussian blur keeps broad shapes and softens fine detail. I subtract the blur from the original to get a detail layer. Then I add some of that layer back to make edges clearer.</p>
+        </div>
+        <div class="formula" aria-label="Sharpening formula">
+          <math display="block"><mrow><msub><mi>U</mi><mi>α</mi></msub><mo>=</mo><mo>(</mo><mn>1</mn><mo>+</mo><mi>α</mi><mo>)</mo><mi>δ</mi><mo>−</mo><mi>α</mi><mi>G</mi></mrow></math>
+          <math display="block"><mrow><msub><mi>I</mi><mi>sharp</mi></msub><mo>=</mo><mi>I</mi><mo>∗</mo><msub><mi>U</mi><mi>α</mi></msub><mo>=</mo><mi>I</mi><mo>+</mo><mi>α</mi><mo>(</mo><mi>I</mi><mo>−</mo><mi>I</mi><mo>∗</mo><mi>G</mi><mo>)</mo></mrow></math>
+          <p class="formula-caption">δ is the impulse filter, G is a Gaussian, and α controls how much detail I add.</p>
+        </div>
+        <div class="image-grid fullrows">
+          <figure class="image-card"><a class="image-link" href="media/results/part2_1/taj_sharpening.png"><img src="media/results/part2_1/taj_sharpening.png" alt="Taj Mahal before and after sharpening, with its blur and detail layer" loading="lazy"></a><figcaption><strong>Taj Mahal · α = 1, 2, 5</strong><span>Larger α makes the detail stronger. At α = 5, some edges look harsh and light halos appear.</span></figcaption></figure>
+          <figure class="image-card"><a class="image-link" href="media/results/part2_1/my_image_sharpening.png"><img src="media/results/part2_1/my_image_sharpening.png" alt="A second photo with its blur, detail layer, and three sharpening results" loading="lazy"></a><figcaption><strong>Second photo · three settings</strong><span>The same filter brings out fine texture here.</span></figcaption></figure>
+        </div>
+        <div class="comparison-row subsection">
+          <figure class="image-card"><a class="image-link" href="media/results/part2_1/blur_resharpen.png"><img src="media/results/part2_1/blur_resharpen.png" alt="A clear image, a blurred version, and the sharpened result" loading="lazy"></a><figcaption><strong>Blur and sharpen again</strong><span>I blurred a clear image, then sharpened it to make some edges clearer.</span></figcaption></figure>
+          <div class="note-card"><h3>Limits of sharpening</h3><p>Sharpening makes edges stronger, but it cannot bring back detail lost to blur. A larger α also makes noise and halos easier to see.</p><p class="small-note">I use a 7 × 7 Gaussian with σ = 1 for the Taj image. The second photo uses a 31 × 31 Gaussian with σ = 5.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section soft" id="hybrids">
+      <div class="section-inner">
+        <div class="section-head">
+          <span class="section-label">PART 2.2 / HYBRID IMAGES</span>
+          <h2>One image can show two views.</h2>
+          <p>A hybrid combines fine detail from one aligned image with broad shapes from another. The detail stands out up close. The broad shapes stand out when the image is small or far away.</p>
+        </div>
+        <div class="formula" aria-label="Hybrid image formula">
+          <math display="block"><mrow><mi>H</mi><mo>=</mo><mo>(</mo><msub><mi>I</mi><mi>high</mi></msub><mo>−</mo><msub><mi>G</mi><msub><mi>σ</mi><mi>high</mi></msub></msub><mo>∗</mo><msub><mi>I</mi><mi>high</mi></msub><mo>)</mo><mo>+</mo><msub><mi>G</mi><msub><mi>σ</mi><mi>low</mi></msub></msub><mo>∗</mo><msub><mi>I</mi><mi>low</mi></msub></mrow></math>
+          <p class="formula-caption">The first term keeps fine detail. The second term keeps broad shapes.</p>
+        </div>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">EXAMPLE 1</span><h3>Derek and Nutmeg</h3></div>
+          <p>This is the course example. I show both source images and the final result here. The full filtering process appears in the tiger and lion example below.</p>
+          <div class="source-row">
+            <figure class="image-card"><a class="image-link" href="media/nutmeg.jpg"><img class="contained" src="media/nutmeg.jpg" alt="Course photo of Nutmeg the cat" loading="lazy"></a><figcaption><strong>Nutmeg</strong><span>Course sample image.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/DerekPicture.jpg"><img class="contained" src="media/DerekPicture.jpg" alt="Course portrait of Derek" loading="lazy"></a><figcaption><strong>Derek</strong><span>Course sample image.</span></figcaption></figure>
+          </div>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part2_2/hybrid_components.png"><img src="media/results/part2_2/hybrid_components.png" alt="Nutmeg and Derek after alignment, their detail and shape layers, and the final hybrid" loading="lazy"></a><figcaption><strong>Aligned views and filtered parts</strong><span>The cat gives the fine detail. Derek gives the broad shapes.</span></figcaption></figure>
+            <figure class="image-card portrait-card"><a class="image-link" href="media/results/part2_2/hybrid_result.png"><img class="contained" src="media/results/part2_2/hybrid_result.png" alt="Hybrid image of Nutmeg and Derek" loading="lazy"></a><figcaption><strong>Final hybrid</strong><span>The cat stands out at full size. Derek stands out when the image is small.</span></figcaption></figure>
+          </div>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">EXAMPLE 2 · FULL PROCESS</span><h3>Tiger and lion</h3></div>
+          <p>I chose matching points near the eyes and nose. I adjusted position, size, and angle, then cropped both photos to the same size. The tiger supplies fine detail. The lion supplies broad shapes.</p>
+          <div class="source-row">
+            <figure class="image-card"><a class="image-link" href="media/tiger-source.jpg"><img class="contained" src="media/tiger-source.jpg" alt="Original tiger photo before matching" loading="lazy"></a><figcaption><strong>Original tiger</strong><span>Before matching.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/lion-source.jpg"><img class="contained" src="media/lion-source.jpg" alt="Original lion photo before matching" loading="lazy"></a><figcaption><strong>Original lion</strong><span>Before matching.</span></figcaption></figure>
+          </div>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part2_2/tiger_lion_hybrid_components.png"><img src="media/results/part2_2/tiger_lion_hybrid_components.png" alt="Tiger and lion after matching, their detail and shape layers, and the final hybrid" loading="lazy"></a><figcaption><strong>Matched images and frequency parts</strong><span>Both photos now have the same size and matching features. I added 0.5 to the detail layer for display, so its bright and dark edges are visible.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_2/tiger_lion_hybrid_frequencies.png"><img src="media/results/part2_2/tiger_lion_hybrid_frequencies.png" alt="Fourier views of the tiger, lion, detail layer, shape layer, and hybrid" loading="lazy"></a><figcaption><strong>Frequency analysis</strong><span>This figure shows each Fourier transform after I center and scale it for display. Broad shapes gather near the center. Fine detail spreads farther out.</span></figcaption></figure>
+          </div>
+          <div class="method-grid">
+            <div class="method-card"><h3>Filter scales</h3><p>After resizing the matched photos, I use σ<sub>high</sub> = 3 pixels for the tiger and σ<sub>low</sub> = 7 pixels for the lion. These settings keep the tiger's stripes and whiskers clear while preserving the lion's broad face.</p><div class="chip-row"><span class="chip">Tiger detail · σ = 3 px</span><span class="chip">Lion shape · σ = 7 px</span></div></div>
+            <div class="method-card"><h3>Reading the spectrum</h3><p>Zero frequency sits in the center after <code>fftshift</code>. Fine edges spread farther from the center. The detail layer has less energy at the center, while the blurred image has more.</p></div>
+          </div>
+          <figure class="image-card single-figure portrait-card"><a class="image-link" href="media/results/part2_2/tiger_lion_hybrid_result.png"><img class="contained" src="media/results/part2_2/tiger_lion_hybrid_result.png" alt="Final tiger and lion hybrid image" loading="lazy"></a><figcaption><strong>Final tiger + lion hybrid</strong><span>At full size, the tiger's stripes stand out. When the image is small, the lion's face is easier to see.</span></figcaption></figure>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">EXAMPLE 3</span><h3>Eye and sunflower</h3></div>
+          <p>This extra pair uses centered crops from the eye and sunflower photos in the project folder. I place the iris over the flower center. The eye supplies fine detail, and the petals supply broad shapes.</p>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part2_2/sunflower_eye_hybrid_components.png"><img src="media/results/part2_2/sunflower_eye_hybrid_components.png" alt="Centered eye and sunflower crops, their detail and shape layers, and the final hybrid" loading="lazy"></a><figcaption><strong>Input crops and filtered parts</strong><span>The crops share a center, so the iris lines up with the flower core.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_2/sunflower_eye_hybrid_frequencies.png"><img src="media/results/part2_2/sunflower_eye_hybrid_frequencies.png" alt="Fourier views of the eye and sunflower during hybrid creation" loading="lazy"></a><figcaption><strong>Frequency view</strong><span>The broad flower shape stays near the center. The eye adds detail farther out.</span></figcaption></figure>
+          </div>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part2_2/sunflower_eye_hybrid_result.png"><img src="media/results/part2_2/sunflower_eye_hybrid_result.png" alt="Sunflower and human eye hybrid image" loading="lazy"></a><figcaption><strong>Final eye and sunflower hybrid</strong><span>This extra example uses σ<sub>high</sub> = 4 px and σ<sub>low</sub> = 10 px.</span></figcaption></figure>
+        </article>
+
+        <article class="method-card subsection">
+          <h3>Extra: does color help?</h3>
+          <p>I made four versions: gray, color in the broad shapes, color in fine detail, and color in both. Color in the lion's broad shapes keeps both faces clear. Color on the tiger's fine edges adds colored lines, so I prefer color in the broad shapes.</p>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part2_2/tiger_lion_color_comparison.png"><img src="media/results/part2_2/tiger_lion_color_comparison.png" alt="Four color tests: gray, color in the broad shapes, color in fine detail, and color in both" loading="lazy"></a><figcaption><strong>Color tests</strong><span>All four versions use the same matched tiger and lion photos.</span></figcaption></figure>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="blend">
+      <div class="section-inner">
+        <div class="section-head">
+          <span class="section-label">PARTS 2.3 AND 2.4 / STACKS AND BLENDING</span>
+          <h2>Blend each scale with a soft mask.</h2>
+          <p>A Gaussian stack keeps the image size as each level becomes smoother. A Laplacian stack stores the detail removed between levels. I blur the mask at each scale, blend the matching details, and add them together.</p>
+        </div>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">2.3</span><h3>Gaussian and Laplacian stacks</h3></div>
+          <p>I built seven levels for the apple and orange. I kept the full image size at every level. The last Gaussian level shows broad shapes. Each earlier Laplacian level shows detail removed by the next blur.</p>
+          <div class="formula" aria-label="Gaussian and Laplacian stack formulas">
+            <math display="block"><mrow><msub><mi>G</mi><mn>0</mn></msub><mo>=</mo><mi>I</mi><mo>,</mo><mspace width=".5em"/><msub><mi>G</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>K</mi><mi>σ</mi></msub><mo>∗</mo><msub><mi>G</mi><mi>k</mi></msub></mrow></math>
+            <math display="block"><mrow><msub><mi>L</mi><mi>k</mi></msub><mo>=</mo><msub><mi>G</mi><mi>k</mi></msub><mo>−</mo><msub><mi>G</mi><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><mspace width=".5em"/><msub><mi>L</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>G</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub></mrow></math>
+            <p class="formula-caption">Each level has the original size. The last Laplacian level is the final blurred image.</p>
+          </div>
+          <div class="image-grid fullrows">
+            <figure class="image-card"><a class="image-link" href="media/results/part2_3/apple_gaussian_stack.png"><img src="media/results/part2_3/apple_gaussian_stack.png" alt="Seven Gaussian stack levels for the apple, each at the original image size" loading="lazy"></a><figcaption><strong>Apple · Gaussian stack</strong><span>The image becomes smoother at every level.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_3/apple_laplacian_stack.png"><img src="media/results/part2_3/apple_laplacian_stack.png" alt="Seven Laplacian stack levels for the apple, each at the original image size" loading="lazy"></a><figcaption><strong>Apple · Laplacian stack</strong><span>Fine details appear in earlier levels; the final level is the broad blur.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_3/orange_gaussian_stack.png"><img src="media/results/part2_3/orange_gaussian_stack.png" alt="Seven Gaussian stack levels for the orange, each at the original image size" loading="lazy"></a><figcaption><strong>Orange · Gaussian stack</strong><span>I use the same blur settings for both images.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_3/orange_laplacian_stack.png"><img src="media/results/part2_3/orange_laplacian_stack.png" alt="Seven Laplacian stack levels for the orange, each at the original image size" loading="lazy"></a><figcaption><strong>Orange · Laplacian stack</strong><span>Each band shows what changed between two Gaussian levels.</span></figcaption></figure>
+          </div>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">2.4</span><h3>The Oraple and two custom blends</h3></div>
+          <p>At each level, I use the blurred mask to mix the two Laplacian bands. Then I add all the blended levels to make the final image.</p>
+          <div class="formula" aria-label="Blend formula across scales">
+            <math display="block"><mrow><msub><mi>B</mi><mi>k</mi></msub><mo>=</mo><msub><mi>M</mi><mi>k</mi></msub><msubsup><mi>L</mi><mi>k</mi><mrow><mo>(</mo><mn>1</mn><mo>)</mo></mrow></msubsup><mo>+</mo><mo>(</mo><mn>1</mn><mo>−</mo><msub><mi>M</mi><mi>k</mi></msub><mo>)</mo><msubsup><mi>L</mi><mi>k</mi><mrow><mo>(</mo><mn>2</mn><mo>)</mo></mrow></msubsup></mrow></math>
+            <math display="block"><mrow><msub><mi>I</mi><mi>blend</mi></msub><mo>=</mo><munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>0</mn></mrow><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></munderover><msub><mi>B</mi><mi>k</mi></msub></mrow></math>
+            <p class="formula-caption">The mask changes at each scale. It makes a wide transition for broad shapes and a tighter one for fine detail.</p>
+          </div>
+          <div class="image-grid">
+            <figure class="image-card"><a class="image-link" href="media/results/part2_4/oraple.png"><img src="media/results/part2_4/oraple.png" alt="Apple and orange photos, their seam mask, and the blended Oraple" loading="lazy"></a><figcaption><strong>Apple + orange · Oraple</strong><span>The fruits meet along a vertical edge.</span></figcaption></figure>
+            <figure class="image-card"><a class="image-link" href="media/results/part2_4/autumn_winter_blend.jpg"><img src="media/results/part2_4/autumn_winter_blend.jpg" alt="A scale blend of a snowy forest and an autumn forest" loading="lazy"></a><figcaption><strong>Custom blend one · winter and autumn</strong><span>A straight mask joins the two forest scenes.</span></figcaption></figure>
+          </div>
+          <details open>
+            <summary>View the Oraple process at each scale</summary>
+            <div class="details-body">
+              <figure class="image-card wide-figure"><a class="image-link" href="media/results/part2_4/oraple_process.png"><img src="media/results/part2_4/oraple_process.png" alt="Seven rows of apple, orange, and blended Laplacian levels for the Oraple" loading="lazy"></a><figcaption><strong>Seven blended levels</strong><span>Each row shows the apple part, orange part, and blend at one scale.</span></figcaption></figure>
+            </div>
+          </details>
+        </article>
+
+        <article class="subsection">
+          <div class="subhead"><span class="number">CUSTOM · OVAL MASK</span><h3>An eye in a sunflower</h3></div>
+          <p>I placed a small eye crop over the sunflower center and used a soft oval mask. The figure below shows both masked views and the final image.</p>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part2_4/sunflower_eye_blend_inputs.png"><img src="media/results/part2_4/sunflower_eye_blend_inputs.png" alt="Sunflower, eye placement, oval mask, two masked views, and final blend" loading="lazy"></a><figcaption><strong>Inputs, oval mask, and result</strong><span>The oval keeps the eye near the flower center and leaves the rest of the flower outside it.</span></figcaption></figure>
+          <details open>
+            <summary>Show all seven Laplacian levels</summary>
+            <div class="details-body">
+              <figure class="image-card wide-figure"><a class="image-link" href="media/results/part2_4/sunflower_eye_blend_process.png"><img src="media/results/part2_4/sunflower_eye_blend_process.png" alt="Seven levels showing the eye part, flower part, and result at each scale" loading="lazy"></a><figcaption><strong>Custom blend at each scale</strong><span>The first two columns show the masked images. The last column shows their blend at each level.</span></figcaption></figure>
+            </div>
+          </details>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part2_4/mychoice_blend.jpg.png"><img src="media/results/part2_4/mychoice_blend.jpg.png" alt="Sunflower with an eye blended into its center" loading="lazy"></a><figcaption><strong>Earlier custom result</strong><span>This earlier result uses the same flower and oval mask.</span></figcaption></figure>
+        </article>
+
+        <article class="method-card subsection">
+          <h3>Extra: color in the blend</h3>
+          <p>I compared gray and color versions of the forest blend. Color keeps the blue snow and warm leaves easy to tell apart. The mask still controls where the scenes meet.</p>
+          <figure class="image-card single-figure"><a class="image-link" href="media/results/part2_4/color_comparison.png"><img src="media/results/part2_4/color_comparison.png" alt="Source photos with gray and color blends" loading="lazy"></a><figcaption><strong>Grayscale and color blends</strong><span>Color makes the change of season easy to see.</span></figcaption></figure>
+        </article>
+      </div>
+    </section>
+
+    <section class="section soft" id="learning">
+      <div class="section-inner">
+        <div class="learn-card">
+          <div><span class="section-label">WHAT I LEARNED</span><h2>One image contains detail at many scales.</h2></div>
+          <div>
+            <p>I learned to see an image as broad shapes mixed with fine detail. Blur keeps broad changes and softens small ones. Derivatives and Laplacian bands show changes at different scales. Once I separate these parts, I can sharpen a photo, combine two images, or soften a seam by blending each scale.</p>
+            <p>These tools have limits. Sharpening makes edges stronger, but it cannot bring back lost detail. A hybrid works best when the photos line up and the blur settings suit the images. A blend can hide a seam, but a wide mask may mix objects that do not fit together.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner"><span>CS 280A · Project 2 · Fun with Filters and Frequencies</span><a href="#start">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>
