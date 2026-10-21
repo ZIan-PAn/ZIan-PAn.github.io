@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CS 280A Project 3: image generation, editing, visual anagrams, hybrid images, and MNIST flow matching from scratch.">
+  <meta name="theme-color" content="#f8f6ef">
+  <title>CS 280A Project 3: Fun with Flow Models</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <nav class="site-nav" aria-label="Primary navigation"><div class="nav-inner">
+    <a class="brand" href="https://zian-pan.github.io/" aria-label="Back to the CS 280A portfolio"><span class="brand-mark" aria-hidden="true"></span><span>CS 280A</span></a>
+    <div class="nav-links"><a href="#start" aria-current="location">Start</a><a href="#part-a">Part A</a><a href="#editing">Editing</a><a href="#illusions">Illusions</a><a href="#part-b">Part B</a><a href="#extras">Extras</a></div>
+  </div></nav>
+  <main id="main">
+    <header class="hero" id="start"><div class="hero-grid"><div class="hero-copy">
+      <div class="eyebrow">CS 280A · PROJECT 3</div>
+      <h1>Fun with<br>Flow Models</h1>
+      <p>Exploring image generation, editing, visual illusions, and flow matching from scratch.</p>
+      <div class="hero-meta"><span>Zian Pan</span><span>Part A + Part B</span><span>Fall 2026</span></div>
+      <div class="part-links">
+        <a class="part-link" href="#part-a"><span class="figure-label">Part A / Explore</span><strong>Use a pretrained flow model ↗</strong><p>Turn noise into images, edit pictures, and combine two ways of seeing.</p></a>
+        <a class="part-link" href="#part-b"><span class="figure-label">Part B / Build</span><strong>Train flow matching from scratch ↗</strong><p>Start with a denoising UNet, then learn to generate handwritten digits.</p></a>
+      </div>
+    </div></div></header>
+
+<section class="section soft" id="part-a"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART A / VISUALIZING TRAINING AND SAMPLING</span><h2>From noise to a clear image.</h2><p>I explore how noise changes an image, compare denoising methods, and use text to guide image generation and editing.</p></div>
+      <nav class="section-jumps" aria-label="Section contents"><a href="#a11">1.1 Noisy inputs</a><a href="#a12">1.2 Gaussian blur</a><a href="#a13">1.3 One step</a><a href="#a14">1.4 Velocity</a><a href="#a15">1.5 Euler</a><a href="#a16">1.6 Generation</a><a href="#guidance">2.1 Guidance</a></nav><article class="subsection" id="a11"><div class="subhead"><span class="number">A 1.1</span><h3>Constructing noisy training inputs</h3></div>
+<p>I mixed my sunflower image with the same noise at three different times. A larger t keeps more of the original image.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/training_inputs.png" data-lightbox data-caption="Original and noisy inputs. Left to right: original, t = 0.25, t = 0.50, and t = 0.75." aria-label="Enlarge: Original and noisy inputs">
+        <img src="media/part-a/training_inputs.png" alt="Original and noisy inputs. Left to right: original, t = 0.25, t = 0.50, and t = 0.75." width="1760" height="440" loading="eager" decoding="async">
+      </a>
+      <figcaption><strong>Original and noisy inputs</strong><span>Left to right: original, t = 0.25, t = 0.50, and t = 0.75.</span></figcaption>
+    </figure>
+</article><article class="subsection" id="a12"><div class="subhead"><span class="number">A 1.2</span><h3>Classical denoising with Gaussian blur</h3></div>
+<p>The Gaussian baseline softens the sunflower while reducing noise. The saved results below use σ = 8, 4, and 1, respectively.</p><div class="image-grid three">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/blur_0.25.png" data-lightbox data-caption="t = 0.25 · σ = 8. Heavy smoothing removes noise but softens the petals." aria-label="Enlarge: t = 0.25 · σ = 8">
+        <img src="media/part-a/blur_0.25.png" alt="t = 0.25 · σ = 8. Heavy smoothing removes noise but softens the petals." width="880" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>t = 0.25 · σ = 8</strong><span>Heavy smoothing removes noise but softens the petals.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/blur_0.5.png" data-lightbox data-caption="t = 0.50 · σ = 4. The flower is clearer, but fine texture is still blurred." aria-label="Enlarge: t = 0.50 · σ = 4">
+        <img src="media/part-a/blur_0.5.png" alt="t = 0.50 · σ = 4. The flower is clearer, but fine texture is still blurred." width="880" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>t = 0.50 · σ = 4</strong><span>The flower is clearer, but fine texture is still blurred.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/blur_0.75.png" data-lightbox data-caption="t = 0.75 · σ = 1. Less noise allows a smaller blur and sharper detail." aria-label="Enlarge: t = 0.75 · σ = 1">
+        <img src="media/part-a/blur_0.75.png" alt="t = 0.75 · σ = 1. Less noise allows a smaller blur and sharper detail." width="880" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>t = 0.75 · σ = 1</strong><span>Less noise allows a smaller blur and sharper detail.</span></figcaption>
+    </figure>
+</div>
+</article><article class="subsection" id="a13"><div class="subhead"><span class="number">A 1.3</span><h3>One step denoising</h3></div>
+<p>I reconstructed the sunflower with a single predicted update. With “a high quality photo”, this recovered more detail than Gaussian blur.</p><div class="image-grid fullrows">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/one_step_0.25.png" data-lightbox data-caption="One step estimate at t = 0.25. Original, noisy input, and one step estimate." aria-label="Enlarge: One step estimate at t = 0.25">
+        <img src="media/part-a/one_step_0.25.png" alt="One step estimate at t = 0.25. Original, noisy input, and one step estimate." width="1320" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>One step estimate at t = 0.25</strong><span>Original, noisy input, and one step estimate.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/one_step_0.5.png" data-lightbox data-caption="One step estimate at t = 0.50. The same sunflower and saved noise as the blur baseline." aria-label="Enlarge: One step estimate at t = 0.50">
+        <img src="media/part-a/one_step_0.5.png" alt="One step estimate at t = 0.50. The same sunflower and saved noise as the blur baseline." width="1320" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>One step estimate at t = 0.50</strong><span>The same sunflower and saved noise as the blur baseline.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/one_step_0.75.png" data-lightbox data-caption="One step estimate at t = 0.75. The input already contains more of the clean image." aria-label="Enlarge: One step estimate at t = 0.75">
+        <img src="media/part-a/one_step_0.75.png" alt="One step estimate at t = 0.75. The input already contains more of the clean image." width="1320" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>One step estimate at t = 0.75</strong><span>The input already contains more of the clean image.</span></figcaption>
+    </figure>
+</div>
+</article><article class="subsection" id="a14"><div class="subhead"><span class="number">A 1.4</span><h3>Visualizing the velocity update</h3></div>
+<p>I compared the changes predicted by the model with the changes needed to recover the original image. I then visualized where they differed most.</p><figure class="image-card original-figure">
+      <a class="image-link" href="media/part-a/velocity_original.png" data-lightbox data-caption="Clean reference. The original sunflower used to compute the ground truth update." aria-label="Enlarge: Clean reference">
+        <img src="media/part-a/velocity_original.png" alt="Clean reference. The original sunflower used to compute the ground truth update." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Clean reference</strong><span>The original sunflower used to compute the ground truth update.</span></figcaption>
+    </figure><div class="image-grid fullrows">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/velocity_0.25.png" data-lightbox data-caption="Velocity diagnostics · t = 0.25. Noisy input, predicted update, ground truth update, and RGB RMS error." aria-label="Enlarge: Velocity diagnostics · t = 0.25">
+        <img src="media/part-a/velocity_0.25.png" alt="Velocity diagnostics · t = 0.25. Noisy input, predicted update, ground truth update, and RGB RMS error." width="1760" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Velocity diagnostics · t = 0.25</strong><span>Noisy input, predicted update, ground truth update, and RGB RMS error.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/velocity_0.50.png" data-lightbox data-caption="Velocity diagnostics · t = 0.50. The error is concentrated around image structure such as the flower center." aria-label="Enlarge: Velocity diagnostics · t = 0.50">
+        <img src="media/part-a/velocity_0.50.png" alt="Velocity diagnostics · t = 0.50. The error is concentrated around image structure such as the flower center." width="1760" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Velocity diagnostics · t = 0.50</strong><span>The error is concentrated around image structure such as the flower center.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/velocity_0.75.png" data-lightbox data-caption="Velocity diagnostics · t = 0.75. The required update is smaller because more of the clean image remains." aria-label="Enlarge: Velocity diagnostics · t = 0.75">
+        <img src="media/part-a/velocity_0.75.png" alt="Velocity diagnostics · t = 0.75. The required update is smaller because more of the clean image remains." width="1760" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Velocity diagnostics · t = 0.75</strong><span>The required update is smaller because more of the clean image remains.</span></figcaption>
+    </figure>
+</div>
+</article><article class="subsection" id="a15"><div class="subhead"><span class="number">A 1.5</span><h3>Iterative denoising with Euler sampling</h3></div>
+<p>I reconstructed the sunflower through 25 small updates, starting at t = 0.50. I adjusted the final update so the process ended exactly at t = 1.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/trajectory.png" data-lightbox data-caption="Euler denoising trajectory. Row order: t = 0.50, 0.60, 0.70, 0.80, 0.90, and 1.00." aria-label="Enlarge: Euler denoising trajectory">
+        <img src="media/part-a/trajectory.png" alt="Euler denoising trajectory. Row order: t = 0.50, 0.60, 0.70, 0.80, 0.90, and 1.00." width="1320" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Euler denoising trajectory</strong><span>Row order: t = 0.50, 0.60, 0.70, 0.80, 0.90, and 1.00.</span></figcaption>
+    </figure><figure class="image-card ">
+      <a class="image-link" href="media/part-a/comparison.png" data-lightbox data-caption="Same input, three denoising methods. Left to right: original, Gaussian blur, one step estimate, and Euler denoising." aria-label="Enlarge: Same input, three denoising methods">
+        <img src="media/part-a/comparison.png" alt="Same input, three denoising methods. Left to right: original, Gaussian blur, one step estimate, and Euler denoising." width="1760" height="440" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Same input, three denoising methods</strong><span>Left to right: original, Gaussian blur, one step estimate, and Euler denoising.</span></figcaption>
+    </figure><div class="table-wrap"><table><caption>Reconstruction MSE at t = 0.50, from the saved run metrics</caption><thead><tr><th scope="col">Method</th><th scope="col">MSE ↓</th><th scope="col">Velocity evaluations</th></tr></thead><tbody>
+<tr><td>Gaussian blur</td><td class="numeric">0.027862</td><td>0</td></tr><tr class="best"><td>One step estimate</td><td class="numeric">0.006792</td><td>1</td></tr><tr><td>Euler denoising</td><td class="numeric">0.008577</td><td>25</td></tr></tbody></table></div><div class="callout"><strong>Observed result.</strong> One step denoising has the lowest reconstruction MSE in this run. Euler still produces a clear sunflower, but following a learned image prior over more steps does not guarantee a closer match to this particular original.</div>
+</article><article class="subsection" id="a16"><div class="subhead"><span class="number">A 1.6</span><h3>Generating images from pure noise</h3></div>
+<p>I also generated images from pure noise through 50 updates. The generic prompt mostly produced portraits, with distorted faces or painterly textures in several samples.</p><p class="prompt"><strong>Prompt:</strong> “a high quality photo”</p><div class="image-grid five">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/conditional_0.png" data-lightbox data-caption="Seed 180. Ordinary conditional sampling without extra guidance." aria-label="Enlarge: Seed 180">
+        <img src="media/part-a/conditional_0.png" alt="Seed 180. Ordinary conditional sampling without extra guidance." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 180</strong><span>Ordinary conditional sampling without extra guidance.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/conditional_1.png" data-lightbox data-caption="Seed 181. Ordinary conditional sampling without extra guidance." aria-label="Enlarge: Seed 181">
+        <img src="media/part-a/conditional_1.png" alt="Seed 181. Ordinary conditional sampling without extra guidance." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 181</strong><span>Ordinary conditional sampling without extra guidance.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/conditional_2.png" data-lightbox data-caption="Seed 182. Ordinary conditional sampling without extra guidance." aria-label="Enlarge: Seed 182">
+        <img src="media/part-a/conditional_2.png" alt="Seed 182. Ordinary conditional sampling without extra guidance." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 182</strong><span>Ordinary conditional sampling without extra guidance.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/conditional_3.png" data-lightbox data-caption="Seed 183. Ordinary conditional sampling without extra guidance." aria-label="Enlarge: Seed 183">
+        <img src="media/part-a/conditional_3.png" alt="Seed 183. Ordinary conditional sampling without extra guidance." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 183</strong><span>Ordinary conditional sampling without extra guidance.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/conditional_4.png" data-lightbox data-caption="Seed 184. Ordinary conditional sampling without extra guidance." aria-label="Enlarge: Seed 184">
+        <img src="media/part-a/conditional_4.png" alt="Seed 184. Ordinary conditional sampling without extra guidance." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 184</strong><span>Ordinary conditional sampling without extra guidance.</span></figcaption>
+    </figure>
+</div>
+</article>
+    </div></section>
+
+<section class="section" id="guidance"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART A / CONDITIONAL GENERATION AND GUIDANCE</span><h2>Give the prompt a stronger voice.</h2><p>Classifier free guidance changes the velocity field while keeping the initial noise fixed.</p></div>
+      <article class="subsection" id="a21"><div class="subhead"><span class="number">A 2.1</span><h3>Classifier free guidance</h3></div>
+<p>I strengthened the influence of the text prompt by combining predictions made with and without it. The guided results use w = 7.</p><p>The five guided samples below reuse exactly the initial noises from Section 1.6. Faces are more complete and photographic, but the results also cluster around clean portrait compositions. In this small set, stronger guidance improves visual quality while reducing variety in the overall style.</p><div class="image-grid five">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/cfg_0.png" data-lightbox data-caption="Seed 180 · w = 7. Same initial noise as the unguided sample above." aria-label="Enlarge: Seed 180 · w = 7">
+        <img src="media/part-a/cfg_0.png" alt="Seed 180 · w = 7. Same initial noise as the unguided sample above." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 180 · w = 7</strong><span>Same initial noise as the unguided sample above.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/cfg_1.png" data-lightbox data-caption="Seed 181 · w = 7. Same initial noise as the unguided sample above." aria-label="Enlarge: Seed 181 · w = 7">
+        <img src="media/part-a/cfg_1.png" alt="Seed 181 · w = 7. Same initial noise as the unguided sample above." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 181 · w = 7</strong><span>Same initial noise as the unguided sample above.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/cfg_2.png" data-lightbox data-caption="Seed 182 · w = 7. Same initial noise as the unguided sample above." aria-label="Enlarge: Seed 182 · w = 7">
+        <img src="media/part-a/cfg_2.png" alt="Seed 182 · w = 7. Same initial noise as the unguided sample above." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 182 · w = 7</strong><span>Same initial noise as the unguided sample above.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/cfg_3.png" data-lightbox data-caption="Seed 183 · w = 7. Same initial noise as the unguided sample above." aria-label="Enlarge: Seed 183 · w = 7">
+        <img src="media/part-a/cfg_3.png" alt="Seed 183 · w = 7. Same initial noise as the unguided sample above." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 183 · w = 7</strong><span>Same initial noise as the unguided sample above.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-a/cfg_4.png" data-lightbox data-caption="Seed 184 · w = 7. Same initial noise as the unguided sample above." aria-label="Enlarge: Seed 184 · w = 7">
+        <img src="media/part-a/cfg_4.png" alt="Seed 184 · w = 7. Same initial noise as the unguided sample above." width="512" height="512" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Seed 184 · w = 7</strong><span>Same initial noise as the unguided sample above.</span></figcaption>
+    </figure>
+</div><p class="small-note">Step size h = 0.02. Seeds 180 to 184 match Section 1.6.</p>
+</article>
+    </div></section>
+
+<section class="section soft" id="editing"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART A / CREATIVE APPLICATIONS</span><h2>Keep the structure. Change the story.</h2><p>Image to image sampling balances the original picture with the model’s learned image prior and a text prompt.</p></div>
+      <nav class="section-jumps" aria-label="Section contents"><a href="#a31">3.1 Image to image</a><a href="#a31creative">Drawings &amp; web images</a><a href="#a32">3.2 Text guided editing</a></nav><article class="subsection" id="a31"><div class="subhead"><span class="number">A 3.1</span><h3>Image to image editing</h3></div>
+<p>I add noise to the Campanile and two of my own inputs, then sample with the generic photo prompt. All sweeps use the same seven starting times and seed 180.</p><p class="prompt"><strong>Prompt:</strong> “a high quality photo”</p><div class="callout"><strong>How to read each grid.</strong> Read left to right, then the next row: original, t = 0.02, 0.04, 0.06, 0.10, 0.14, 0.25, 0.50. Click any result to enlarge it.</div><div class="sweep"><h4>The Campanile</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_campanile.png" data-lightbox data-caption="Campanile · generic photo prompt. The tower changes most at low starting times. Its shape and architectural details return as more of the input is preserved." aria-label="Enlarge: Campanile · generic photo prompt">
+        <img src="media/part-a/edit_campanile.png" alt="Campanile · generic photo prompt. The tower changes most at low starting times. Its shape and architectural details return as more of the input is preserved." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Campanile · generic photo prompt</strong><span>The tower changes most at low starting times. Its shape and architectural details return as more of the input is preserved.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Pixel art cat</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_my_image_1.png" data-lightbox data-caption="Cat · generic photo prompt. Low starting times produce unrelated objects. The cat returns as t increases, but much of its pixel art style remains." aria-label="Enlarge: Cat · generic photo prompt">
+        <img src="media/part-a/edit_my_image_1.png" alt="Cat · generic photo prompt. Low starting times produce unrelated objects. The cat returns as t increases, but much of its pixel art style remains." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Cat · generic photo prompt</strong><span>Low starting times produce unrelated objects. The cat returns as t increases, but much of its pixel art style remains.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Pixel art house</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_my_image_2.png" data-lightbox data-caption="House · generic photo prompt. The red roof becomes different rounded objects at low t. Larger t preserves the small house." aria-label="Enlarge: House · generic photo prompt">
+        <img src="media/part-a/edit_my_image_2.png" alt="House · generic photo prompt. The red roof becomes different rounded objects at low t. Larger t preserves the small house." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>House · generic photo prompt</strong><span>The red roof becomes different rounded objects at low t. Larger t preserves the small house.</span></figcaption>
+    </figure></div>
+</article><article class="subsection" id="a31creative"><div class="subhead"><span class="number">A 3.1</span><h3>Editing drawings and a web image</h3></div>
+<p>I repeat the same procedure on a downloaded tiger photo and two hand drawn images. The generic prompt can reinterpret a noisy input in unexpected ways. It often favors faces or unrelated objects when little of the source remains.</p><div class="sweep"><h4>Web image · tiger</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_web_image.png" data-lightbox data-caption="Downloaded tiger photo. At low starting times the result becomes a portrait. The tiger’s face is recognizable again at higher t." aria-label="Enlarge: Downloaded tiger photo">
+        <img src="media/part-a/edit_web_image.png" alt="Downloaded tiger photo. At low starting times the result becomes a portrait. The tiger’s face is recognizable again at higher t." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Downloaded tiger photo</strong><span>At low starting times the result becomes a portrait. The tiger’s face is recognizable again at higher t.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Hand drawn cat</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_drawing_1.png" data-lightbox data-caption="Cat drawing. The drawing turns into smooth objects at low t. With more source information, its outline and colored pencil texture return." aria-label="Enlarge: Cat drawing">
+        <img src="media/part-a/edit_drawing_1.png" alt="Cat drawing. The drawing turns into smooth objects at low t. With more source information, its outline and colored pencil texture return." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Cat drawing</strong><span>The drawing turns into smooth objects at low t. With more source information, its outline and colored pencil texture return.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Hand drawn house</h4><figure class="image-card ">
+      <a class="image-link" href="media/part-a/edit_drawing_2.png" data-lightbox data-caption="House drawing. The roof is reinterpreted as simple geometric shapes before the drawn house returns. A photo prompt does not reliably make this drawing realistic." aria-label="Enlarge: House drawing">
+        <img src="media/part-a/edit_drawing_2.png" alt="House drawing. The roof is reinterpreted as simple geometric shapes before the drawn house returns. A photo prompt does not reliably make this drawing realistic." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>House drawing</strong><span>The roof is reinterpreted as simple geometric shapes before the drawn house returns. A photo prompt does not reliably make this drawing realistic.</span></figcaption>
+    </figure></div>
+</article><article class="subsection" id="a32"><div class="subhead"><span class="number">A 3.2</span><h3>Text guided image editing</h3></div>
+<p>I keep the inputs, noise, and starting times from Section 3.1, but replace the generic prompt with a desired edit. Small t allows the prompt to change the subject and material. Large t favors the source image.</p><div class="sweep"><h4>Campanile → rocket</h4><p class="prompt"><strong>Prompt:</strong> “a photograph of a rocket on a launch pad”</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/text_edit_campanile.png" data-lightbox data-caption="A tower becomes a rocket. At low t the model generates a rocket scene. Intermediate times combine the tower’s tall outline with rocket like surfaces. High t restores the Campanile." aria-label="Enlarge: A tower becomes a rocket">
+        <img src="media/part-a/text_edit_campanile.png" alt="A tower becomes a rocket. At low t the model generates a rocket scene. Intermediate times combine the tower’s tall outline with rocket like surfaces. High t restores the Campanile." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>A tower becomes a rocket</strong><span>At low t the model generates a rocket scene. Intermediate times combine the tower’s tall outline with rocket like surfaces. High t restores the Campanile.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Pixel cat → tiger</h4><p class="prompt"><strong>Prompt:</strong> “a photograph of a majestic tiger in a forest”</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/text_edit_my_image_1.png" data-lightbox data-caption="A small cat becomes a tiger. The prompt produces a photographic tiger at the lowest times, then a tiger like illustration, before the original pixel cat returns." aria-label="Enlarge: A small cat becomes a tiger">
+        <img src="media/part-a/text_edit_my_image_1.png" alt="A small cat becomes a tiger. The prompt produces a photographic tiger at the lowest times, then a tiger like illustration, before the original pixel cat returns." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>A small cat becomes a tiger</strong><span>The prompt produces a photographic tiger at the lowest times, then a tiger like illustration, before the original pixel cat returns.</span></figcaption>
+    </figure></div><div class="sweep"><h4>Pixel house → glass mansion</h4><p class="prompt"><strong>Prompt:</strong> “a photograph of a futuristic glass mansion at night”</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/text_edit_my_image_2.png" data-lightbox data-caption="A house becomes a glass building. Low starting times favor a modern glass building. The roof and cartoon house increasingly dominate as t grows." aria-label="Enlarge: A house becomes a glass building">
+        <img src="media/part-a/text_edit_my_image_2.png" alt="A house becomes a glass building. Low starting times favor a modern glass building. The roof and cartoon house increasingly dominate as t grows." width="1760" height="880" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>A house becomes a glass building</strong><span>Low starting times favor a modern glass building. The roof and cartoon house increasingly dominate as t grows.</span></figcaption>
+    </figure></div>
+</article>
+    </div></section>
+
+<section class="section" id="illusions"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART A / ILLUSIONS AND BELLS &amp; WHISTLES</span><h2>One image. Two readings.</h2><p>I combine velocity predictions across orientations or frequency bands to create images with more than one interpretation.</p></div>
+      <nav class="section-jumps" aria-label="Section contents"><a href="#a33">3.3 Visual anagrams</a><a href="#a34">3.4 Hybrid images</a><a href="#a-bw">Extra transformations</a><a href="#a-logo">Course logo</a></nav><article class="subsection" id="a33"><div class="subhead"><span class="number">A 3.3</span><h3>Visual anagrams · rotate 180°</h3></div>
+<p>I ask one image to satisfy two prompts in two orientations. At every Euler step, I predict a guided velocity for the upright image and another for the 180° rotated image. I rotate the second prediction back before averaging them.</p><figure class="image-card anagram-card">
+      <a class="image-link" href="media/part-a/anagram_views_0.png" data-lightbox data-caption="Old man ↔ people around a campfire. Seed 180. Left prompt: “an oil painting of an old man”. Right prompt: “an oil painting of people around a campfire”. The right view is the same image rotated 180°." aria-label="Enlarge: Old man ↔ people around a campfire">
+        <img src="media/part-a/anagram_views_0.png" alt="Old man ↔ people around a campfire. Seed 180. Left prompt: “an oil painting of an old man”. Right prompt: “an oil painting of people around a campfire”. The right view is the same image rotated 180°." width="793" height="411" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Old man ↔ people around a campfire</strong><span>Seed 180. Left prompt: “an oil painting of an old man”. Right prompt: “an oil painting of people around a campfire”. The right view is the same image rotated 180°.</span></figcaption>
+    </figure><figure class="image-card anagram-card">
+      <a class="image-link" href="media/part-a/anagram_views_1.png" data-lightbox data-caption="Snowy mountain village ↔ horse. Seed 181. Left prompt: “a lithograph of a snowy mountain village”. Right prompt: “a lithograph of a horse”. The two readings share the same marks and shading." aria-label="Enlarge: Snowy mountain village ↔ horse">
+        <img src="media/part-a/anagram_views_1.png" alt="Snowy mountain village ↔ horse. Seed 181. Left prompt: “a lithograph of a snowy mountain village”. Right prompt: “a lithograph of a horse”. The two readings share the same marks and shading." width="793" height="411" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Snowy mountain village ↔ horse</strong><span>Seed 181. Left prompt: “a lithograph of a snowy mountain village”. Right prompt: “a lithograph of a horse”. The two readings share the same marks and shading.</span></figcaption>
+    </figure><p class="figure-note">The old man face is clear. The campfire interpretation is less distinct. The village/horse pair also shows a tradeoff between the two subjects.</p>
+</article><article class="subsection" id="a34"><div class="subhead"><span class="number">A 3.4</span><h3>Hybrid images · look from a distance</h3></div><p>I combined the overall shape from one prompt with fine details from another. I used a large centered face for the distant view and detailed scenery for the near view.</p><div class="image-grid"><figure class="image-card hybrid-card"><div class="hybrid-views"><div><a class="image-link" href="media/part-a/hybrid_0.png" data-lightbox data-caption="Waterfall / skull. Near / high frequency prompt: “a detailed black and white lithograph of a waterfall”. Far / low frequency prompt: “a black and white lithograph of a large human skull face, centered”. Seed 180." aria-label="Enlarge: Waterfall / skull"><img src="media/part-a/hybrid_0.png" alt="Waterfall / skull: revised full size hybrid" width="512" height="512" loading="lazy" decoding="async"></a><span class="view-label">Near · full image</span></div><div class="distant-view"><a class="image-link" href="media/part-a/hybrid_distant_0.png" data-lightbox data-caption="Waterfall / skull. Near / high frequency prompt: “a detailed black and white lithograph of a waterfall”. Far / low frequency prompt: “a black and white lithograph of a large human skull face, centered”. Seed 180." aria-label="Enlarge distant view: Waterfall / skull"><img class="small-preview" src="media/part-a/hybrid_distant_0.png" alt="Waterfall / skull: revised 64 by 64 distant view" width="64" height="64" loading="lazy" decoding="async"></a><span class="view-label">Far · 64 × 64</span></div></div><figcaption><strong>Waterfall / skull</strong><span>Near / high frequency prompt: “a detailed black and white lithograph of a waterfall”. Far / low frequency prompt: “a black and white lithograph of a large human skull face, centered”. Seed 180.</span></figcaption></figure><figure class="image-card hybrid-card"><div class="hybrid-views"><div><a class="image-link" href="media/part-a/hybrid_1.png" data-lightbox data-caption="Forest / cat. Near / high frequency prompt: “a detailed black and white lithograph of dense forest trees”. Far / low frequency prompt: “a black and white lithograph of a large cat face, centered”. Seed 181." aria-label="Enlarge: Forest / cat"><img src="media/part-a/hybrid_1.png" alt="Forest / cat: revised full size hybrid" width="512" height="512" loading="lazy" decoding="async"></a><span class="view-label">Near · full image</span></div><div class="distant-view"><a class="image-link" href="media/part-a/hybrid_distant_1.png" data-lightbox data-caption="Forest / cat. Near / high frequency prompt: “a detailed black and white lithograph of dense forest trees”. Far / low frequency prompt: “a black and white lithograph of a large cat face, centered”. Seed 181." aria-label="Enlarge distant view: Forest / cat"><img class="small-preview" src="media/part-a/hybrid_distant_1.png" alt="Forest / cat: revised 64 by 64 distant view" width="64" height="64" loading="lazy" decoding="async"></a><span class="view-label">Far · 64 × 64</span></div></div><figcaption><strong>Forest / cat</strong><span>Near / high frequency prompt: “a detailed black and white lithograph of dense forest trees”. Far / low frequency prompt: “a black and white lithograph of a large cat face, centered”. Seed 181.</span></figcaption></figure></div><p>The waterfall is clear, but the intended centered skull remains weak: the dark right edge reads more like a face profile. The forest outline resembles a cat more clearly in the small view, with two ears formed by the trees.</p></article><article class="subsection" id="a-bw"><div class="subhead"><span class="number">A B&amp;W</span><h3>Two more transformations</h3></div>
+<p>I made images for horizontal reflection and a 90° turn. I combined the predictions from both views so the same image could suggest two different subjects.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-a/bw_flip.png" data-lightbox data-caption="Horizontal reflection · woman / lion. Prompts: “an oil painting of a woman’s face” and “an oil painting of a lion’s face”. Seed 280. A lion face dominates both views, so the second subject is difficult to see." aria-label="Enlarge: Horizontal reflection · woman / lion">
+        <img src="media/part-a/bw_flip.png" alt="Horizontal reflection · woman / lion. Prompts: “an oil painting of a woman’s face” and “an oil painting of a lion’s face”. Seed 280. A lion face dominates both views, so the second subject is difficult to see." width="793" height="411" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Horizontal reflection · woman / lion</strong><span>Prompts: “an oil painting of a woman’s face” and “an oil painting of a lion’s face”. Seed 280. A lion face dominates both views, so the second subject is difficult to see.</span></figcaption>
+    </figure><figure class="image-card ">
+      <a class="image-link" href="media/part-a/bw_rotate90.png" data-lightbox data-caption="90° counterclockwise rotation · village / horse. Prompts: “a lithograph of a snowy mountain village” and “a lithograph of a horse”. Seed 281. The second velocity is rotated 90° clockwise to bring it back before averaging." aria-label="Enlarge: 90° counterclockwise rotation · village / horse">
+        <img src="media/part-a/bw_rotate90.png" alt="90° counterclockwise rotation · village / horse. Prompts: “a lithograph of a snowy mountain village” and “a lithograph of a horse”. Seed 281. The second velocity is rotated 90° clockwise to bring it back before averaging." width="793" height="411" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>90° counterclockwise rotation · village / horse</strong><span>Prompts: “a lithograph of a snowy mountain village” and “a lithograph of a horse”. Seed 281. The second velocity is rotated 90° clockwise to bring it back before averaging.</span></figcaption>
+    </figure><div class="callout"><strong>What worked less well.</strong> Correctly combining transformed velocities does not guarantee two equally clear subjects. These additional transforms produce mixed results. Some features of one subject dominate the other.</div>
+</article><article class="subsection" id="a-logo"><div class="subhead"><span class="number">A B&amp;W</span><h3>Designing a course logo</h3></div><p>I generate four logo candidates directly from noise with a blue and gold camera aperture prompt. Each candidate uses a different seed, with h = 0.02 and CFG weight w = 7.</p><p class="prompt"><strong>Prompt:</strong> “a professional minimalist university photography course logo, a large golden camera aperture in the center, six shutter blades forming a circular lens, Berkeley blue and gold color scheme, clean flat vector illustration, no text, no letters”</p><figure class="image-card"><a class="image-link" href="media/part-a/course_logo_candidates.png" data-lightbox data-caption="Four camera aperture candidates. Panels 0 to 3 correspond to noise seeds 380 to 383." aria-label="Enlarge: Four camera aperture candidates"><img src="media/part-a/course_logo_candidates.png" alt="Four camera aperture candidates. Panels 0 to 3 correspond to noise seeds 380 to 383." width="793" height="811" loading="lazy" decoding="async"></a><figcaption><strong>Four camera aperture candidates</strong><span>Panels 0 to 3 correspond to noise seeds 380 to 383.</span></figcaption></figure><p>The first candidate is closest to a clean camera emblem. Some others contain unwanted text like marks, and the requested six shutter blades are not consistently followed.</p></article>
+    </div></section>
+
+<section class="section soft" id="part-b"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART B / TRAINING A SINGLE STEP DENOISING UNET</span><h2>Build a model, one digit at a time.</h2><p>I trained models to remove noise, generate handwritten digits, and follow requested digit labels.</p></div>
+      <nav class="section-jumps" aria-label="Section contents"><a href="#b11">1.1 UNet</a><a href="#b12">1.2 Noising</a><a href="#b121">1.2.1 Training</a><a href="#b122">1.2.2 OOD testing</a><a href="#b123">1.2.3 Pure noise</a><a href="#b21">2.1 to 2.3 Time conditioning</a><a href="#class-conditioning">2.4 to 2.6 Class conditioning</a><a href="#extras">3. Bells &amp; Whistles</a></nav><article class="subsection" id="b11"><div class="subhead"><span class="number">B 1.1</span><h3>Building the UNet</h3></div><p>I completed the image processing layers and connected them in the supplied UNet. The denoising model uses 128 hidden channels.</p></article><article class="subsection" id="b12"><div class="subhead"><span class="number">B 1.2</span><h3>Visualizing the noising process</h3></div>
+<p>For the one step denoiser, I add noise directly to a digit. I reuse one noise tensor while changing its strength so the change in σ is easy to compare.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_noising_process.png" data-lightbox data-caption="One digit with increasing noise. Left to right: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, and 1.0. Images are clipped to [0, 1] only for display." aria-label="Enlarge: One digit with increasing noise">
+        <img src="media/part-b/part1_noising_process.png" alt="One digit with increasing noise. Left to right: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, and 1.0. Images are clipped to [0, 1] only for display." width="2235" height="357" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>One digit with increasing noise</strong><span>Left to right: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, and 1.0. Images are clipped to [0, 1] only for display.</span></figcaption>
+    </figure>
+</article><article class="subsection" id="b121"><div class="subhead"><span class="number">B 1.2.1</span><h3>Training a single step denoiser</h3></div>
+<p>I train a D = 128 UNet for 5 epochs with batch size 256 and Adam at learning rate 10⁻⁴. Every fetched training batch receives fresh Gaussian noise at σ = 0.5. The model minimizes the mean squared error between its prediction and the clean digit.</p><div class="image-grid ">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_denoising_loss.png" data-lightbox data-caption="Denoising training loss. Loss recorded across optimizer steps during all five epochs." aria-label="Enlarge: Denoising training loss">
+        <img src="media/part-b/part1_denoising_loss.png" alt="Denoising training loss. Loss recorded across optimizer steps during all five epochs." width="1181" height="731" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Denoising training loss</strong><span>Loss recorded across optimizer steps during all five epochs.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_denoising_epochs_1_5.png" data-lightbox data-caption="Test set denoising · epochs 1 and 5. Rows: clean test digits, noisy inputs, epoch 1 outputs, and epoch 5 outputs." aria-label="Enlarge: Test set denoising · epochs 1 and 5">
+        <img src="media/part-b/part1_denoising_epochs_1_5.png" alt="Test set denoising · epochs 1 and 5. Rows: clean test digits, noisy inputs, epoch 1 outputs, and epoch 5 outputs." width="2384" height="1185" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Test set denoising · epochs 1 and 5</strong><span>Rows: clean test digits, noisy inputs, epoch 1 outputs, and epoch 5 outputs.</span></figcaption>
+    </figure>
+</div><p>By epoch 1, the model already recovers recognizable strokes from noisy test inputs. At epoch 5 the strokes are cleaner, though some small details are smoothed away.</p>
+</article><article class="subsection" id="b122"><div class="subhead"><span class="number">B 1.2.2</span><h3>Out of distribution noise levels</h3></div>
+<p>I keep the same test digit and noise tensor, then change σ beyond the training level of 0.5. The denoiser handles nearby levels reasonably well. At σ = 1.0, the recovered 7 has a more distorted horizontal stroke and extra artifacts.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_ood_testing.png" data-lightbox data-caption="Same test digit, different noise levels. Top row: noisy input. Bottom row: denoised output. Columns: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0." aria-label="Enlarge: Same test digit, different noise levels">
+        <img src="media/part-b/part1_ood_testing.png" alt="Same test digit, different noise levels. Top row: noisy input. Bottom row: denoised output. Columns: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0." width="2235" height="691" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Same test digit, different noise levels</strong><span>Top row: noisy input. Bottom row: denoised output. Columns: σ = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0.</span></figcaption>
+    </figure>
+</article><article class="subsection" id="b123"><div class="subhead"><span class="number">B 1.2.3</span><h3>Trying to denoise pure noise</h3></div>
+<p>I train a fresh D = 128 UNet for another 5 epochs with the same optimizer and batch size. This time the input is pure Gaussian noise, independent of the target digit. The outputs become similar blurry shapes resembling an average digit instead of separate clean digits.</p><div class="image-grid ">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_pure_noise_loss.png" data-lightbox data-caption="Pure noise training loss. Loss is sampled every 10 optimizer steps in this plot. The final epoch mean is 0.067393." aria-label="Enlarge: Pure noise training loss">
+        <img src="media/part-b/part1_pure_noise_loss.png" alt="Pure noise training loss. Loss is sampled every 10 optimizer steps in this plot. The final epoch mean is 0.067393." width="1181" height="581" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Pure noise training loss</strong><span>Loss is sampled every 10 optimizer steps in this plot. The final epoch mean is 0.067393.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part1_pure_noise_epochs_1_5.png" data-lightbox data-caption="Pure noise predictions · epochs 1 and 5. Rows: reference digits, independent pure noise, epoch 1 outputs, and epoch 5 outputs." aria-label="Enlarge: Pure noise predictions · epochs 1 and 5">
+        <img src="media/part-b/part1_pure_noise_epochs_1_5.png" alt="Pure noise predictions · epochs 1 and 5. Rows: reference digits, independent pure noise, epoch 1 outputs, and epoch 5 outputs." width="2384" height="1185" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Pure noise predictions · epochs 1 and 5</strong><span>Rows: reference digits, independent pure noise, epoch 1 outputs, and epoch 5 outputs.</span></figcaption>
+    </figure>
+</div><div class="callout"><strong>Why the outputs look alike.</strong> Because the input noise is independent of the target, minimizing the average prediction error encourages the model to produce an average of the training digits. Overlapping strokes from many digits create the blurry central shape.</div>
+</article>
+    </div></section>
+
+<section class="section" id="time-conditioning"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART B / TIME CONDITIONED FLOW MATCHING</span><h2>Learn the direction at every time.</h2><p>A sequence of small velocity updates can create a digit where a single pure noise prediction could only average.</p></div>
+      <article class="subsection" id="b21"><div class="subhead"><span class="number">B 2.1</span><h3>Adding time conditioning</h3></div>
+<p>I included the current time as an extra input so the model could learn how to change the image at different stages.</p>
+</article><article class="subsection" id="b22"><div class="subhead"><span class="number">B 2.2</span><h3>Training the time conditioned UNet</h3></div>
+<p>I train a D = 64 model for 10 epochs with batch size 64. I used Adam with an initial learning rate of 0.01 and gradually reduced it after each epoch. I trained it to predict how each noisy image should move toward a clean digit.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_time_fm_loss.png" data-lightbox data-caption="Time conditioned flow matching loss. Training loss across 10 epochs. Final epoch mean: 0.087730." aria-label="Enlarge: Time conditioned flow matching loss">
+        <img src="media/part-b/part2_time_fm_loss.png" alt="Time conditioned flow matching loss. Training loss across 10 epochs. Final epoch mean: 0.087730." width="1184" height="731" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Time conditioned flow matching loss</strong><span>Training loss across 10 epochs. Final epoch mean: 0.087730.</span></figcaption>
+    </figure>
+</article><article class="subsection" id="b23"><div class="subhead"><span class="number">B 2.3</span><h3>Sampling at epochs 1, 5, and 10</h3></div>
+<p>I sample each checkpoint with 300 Euler steps from t = 0 to t = 1. Columns reuse seeds 0 to 9, so each column starts from the same initial noise across checkpoints. Some outputs look like digits early on, but several remain ambiguous even at epoch 10.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_time_fm_epochs_1_5_10.png" data-lightbox data-caption="Time conditioned generation. Rows: epoch 1, epoch 5, epoch 10. Columns: seeds 0 to 9. No class labels are provided." aria-label="Enlarge: Time conditioned generation">
+        <img src="media/part-b/part2_time_fm_epochs_1_5_10.png" alt="Time conditioned generation. Rows: epoch 1, epoch 5, epoch 10. Columns: seeds 0 to 9. No class labels are provided." width="2359" height="853" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Time conditioned generation</strong><span>Rows: epoch 1, epoch 5, epoch 10. Columns: seeds 0 to 9. No class labels are provided.</span></figcaption>
+    </figure><p class="small-note">The 300 step sampling grid is finer than the 50 point grid used to draw training times. The improved time only model is compared in the CS280A extras below.</p>
+</article>
+    </div></section>
+
+<section class="section soft" id="class-conditioning"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART B / CLASS CONDITIONED FLOW MATCHING</span><h2>Choose the digit before sampling.</h2><p>Class labels add control, and classifier free guidance makes that signal stronger during generation.</p></div>
+      <article class="subsection" id="b24"><div class="subhead"><span class="number">B 2.4</span><h3>Adding class conditioning</h3></div>
+<p>I added a digit label to control which number the model generates. I hid the label in 10% of training examples so the model could also make predictions without a label.</p>
+</article><article class="subsection" id="b25"><div class="subhead"><span class="number">B 2.5</span><h3>Training with and without a scheduler</h3></div>
+<p>I train two fresh D = 64 class conditioned models for 10 epochs with batch size 64 and 10% class dropout. One uses Adam with an initial learning rate of 10⁻² and exponential decay. For the other, I remove the scheduler and use a lower constant rate of 10⁻³ to avoid keeping the large initial rate throughout training.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_class_fm_loss_comparison.png" data-lightbox data-caption="Scheduler comparison. Each point is an epoch mean training loss. Blue: exponential scheduler. Orange: constant learning rate." aria-label="Enlarge: Scheduler comparison">
+        <img src="media/part-b/part2_class_fm_loss_comparison.png" alt="Scheduler comparison. Each point is an epoch mean training loss. Blue: exponential scheduler. Orange: constant learning rate." width="1049" height="701" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Scheduler comparison</strong><span>Each point is an epoch mean training loss. Blue: exponential scheduler. Orange: constant learning rate.</span></figcaption>
+    </figure><div class="table-wrap"><table><caption>Class conditioned training settings and recorded final losses</caption><thead><tr><th scope="col">Run</th><th scope="col">Learning rate</th><th scope="col">Epoch 10 loss</th></tr></thead><tbody>
+<tr><td>With scheduler</td><td>Starts at 0.01 and decreases each epoch</td><td class="numeric">0.0802</td></tr><tr><td>No scheduler</td><td>Constant 10⁻³</td><td class="numeric">0.0806</td></tr></tbody></table></div><p>The two training curves end close together. The lower constant rate compensates for removing decay in this run. The image grids below also show broadly similar digit quality. These are single runs with independently initialized models, so they do not establish exact equivalence.</p>
+</article><article class="subsection" id="b26"><div class="subhead"><span class="number">B 2.6</span><h3>Sampling every class with guidance</h3></div>
+<p>I generate four instances of each digit at epochs 1, 5, and 10, with 300 Euler steps and guidance scale γ = 5. The class conditioned model follows the requested digit in most columns and produces more legible samples than the time only baseline.</p><div class="callout"><strong>Grid labels.</strong> Columns are digits 0 to 9. Rows 1 to 4 are epoch 1, rows 5 to 8 are epoch 5, and rows 9 to 12 are epoch 10. Within each block, the seeds are 0, 1, 2, and 3. Each block contains 40 generated digits.</div><div class="image-grid ">
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_class_fm_scheduler_epochs_1_5_10.png" data-lightbox data-caption="Class conditioned samples · with scheduler. Epochs 1, 5, 10 from top to bottom, four rows per epoch. Digits 0 to 9 run across the columns." aria-label="Enlarge: Class conditioned samples · with scheduler">
+        <img src="media/part-b/part2_class_fm_scheduler_epochs_1_5_10.png" alt="Class conditioned samples · with scheduler. Epochs 1, 5, 10 from top to bottom, four rows per epoch. Digits 0 to 9 run across the columns." width="1732" height="1771" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Class conditioned samples · with scheduler</strong><span>Epochs 1, 5, 10 from top to bottom, four rows per epoch. Digits 0 to 9 run across the columns.</span></figcaption>
+    </figure>
+<figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_class_fm_constant_epochs_1_5_10.png" data-lightbox data-caption="Class conditioned samples · constant learning rate. Same requested classes, seeds, and 300 step sampling as the scheduler run." aria-label="Enlarge: Class conditioned samples · constant learning rate">
+        <img src="media/part-b/part2_class_fm_constant_epochs_1_5_10.png" alt="Class conditioned samples · constant learning rate. Same requested classes, seeds, and 300 step sampling as the scheduler run." width="1732" height="1771" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Class conditioned samples · constant learning rate</strong><span>Same requested classes, seeds, and 300 step sampling as the scheduler run.</span></figcaption>
+    </figure>
+</div><p>Later checkpoints generally give cleaner, more consistent digit shapes. The constant rate model retains similar visual quality without an epoch scheduler, although individual shapes and stroke widths differ.</p><details><summary>View the quick 50 step sampling comparison</summary><div class="details-body"><figure class="image-card ">
+      <a class="image-link" href="media/part-b/part2_class_fm_quick_comparison.png" data-lightbox data-caption="Quick comparison · 50 Euler steps. Top three rows: scheduler at epochs 1, 5, 10. Bottom three rows: constant rate at epochs 1, 5, 10. Columns are digits 0 to 9. Seed 42." aria-label="Enlarge: Quick comparison · 50 Euler steps">
+        <img src="media/part-b/part2_class_fm_quick_comparison.png" alt="Quick comparison · 50 Euler steps. Top three rows: scheduler at epochs 1, 5, 10. Bottom three rows: constant rate at epochs 1, 5, 10. Columns are digits 0 to 9. Seed 42." width="2234" height="1335" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Quick comparison · 50 Euler steps</strong><span>Top three rows: scheduler at epochs 1, 5, 10. Bottom three rows: constant rate at epochs 1, 5, 10. Columns are digits 0 to 9. Seed 42.</span></figcaption>
+    </figure></div></details>
+</article>
+    </div></section>
+
+<section class="section" id="extras"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PART B / BELLS &amp; WHISTLES</span><h2>More capacity. More time to learn.</h2><p>I improve the time conditioned model without adding class information.</p></div>
+      <article class="subsection" id="b-bw"><div class="subhead"><span class="number">B 3</span><h3>A better time only UNet</h3></div>
+<p>For the required CS280A extension, I increase the time only model’s width from D = 64 to D = 128 and train for 30 epochs instead of 10. It still receives no digit labels. I used Adam with an initial learning rate of 0.01 and reduced it gradually over the 30 epochs.</p><figure class="image-card ">
+      <a class="image-link" href="media/part-b/bw_baseline_vs_improved.png" data-lightbox data-caption="Baseline vs. improved time only model. Top: D = 64 after 10 epochs. Bottom: D = 128 after 30 epochs. Columns reuse seeds 0 to 9, with 300 Euler steps for both models." aria-label="Enlarge: Baseline vs. improved time only model">
+        <img src="media/part-b/bw_baseline_vs_improved.png" alt="Baseline vs. improved time only model. Top: D = 64 after 10 epochs. Bottom: D = 128 after 30 epochs. Columns reuse seeds 0 to 9, with 300 Euler steps for both models." width="2359" height="611" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Baseline vs. improved time only model</strong><span>Top: D = 64 after 10 epochs. Bottom: D = 128 after 30 epochs. Columns reuse seeds 0 to 9, with 300 Euler steps for both models.</span></figcaption>
+    </figure><figure class="image-card ">
+      <a class="image-link" href="media/part-b/bw_training_loss.png" data-lightbox data-caption="Training the wider model for longer. Epoch mean loss for the improved model. The final recorded value is 0.083045." aria-label="Enlarge: Training the wider model for longer">
+        <img src="media/part-b/bw_training_loss.png" alt="Training the wider model for longer. Epoch mean loss for the improved model. The final recorded value is 0.083045." width="1184" height="731" loading="lazy" decoding="async">
+      </a>
+      <figcaption><strong>Training the wider model for longer</strong><span>Epoch mean loss for the improved model. The final recorded value is 0.083045.</span></figcaption>
+    </figure><div class="readout-grid"><div class="readout"><span>Hidden width</span><strong>64 → 128</strong></div><div class="readout"><span>Training epochs</span><strong>10 → 30</strong></div><div class="readout"><span>Final training loss</span><strong>0.08773 → 0.08305</strong></div></div><p>The wider model trained for longer produces more recognizable digits for several fixed seeds, though some outputs remain ambiguous. Different models can map the same starting noise to different digits. Because both width and training duration change, this experiment shows their combined effect rather than isolating either factor.</p>
+</article>
+    </div></section>
+
+<section class="section soft" id="reflection"><div class="section-inner">
+      <div class="section-head"><span class="section-label">PROJECT 3 / REFLECTION</span><h2>From using a model to building one.</h2><p>Both parts connect the same idea: learn or combine directions, then follow them from noise to an image.</p></div>
+      <div class="learn-card"><h2>What I learned</h2><ul class="takeaways">
+<li>A velocity prediction is a direction of change. Recomputing it over time makes generation possible, but more steps do not always minimize reconstruction error for one image.</li>
+<li>Starting time controls how much structure an edit keeps. At low times, a generic prompt can replace the source with an unrelated subject.</li>
+<li>Transform and frequency constraints can share one generated image, but their visual balance is often imperfect.</li>
+<li>Pure noise MSE training tends toward an average digit. Time conditioning learns a path. Class conditioning adds control over its endpoint.</li>
+</ul></div>
+
+    </div></section>
+
+  </main>
+  <footer class="site-footer"><div class="footer-inner"><span>CS 280A · Project 3 · Zian Pan</span><a href="#start">Back to the beginning ↑</a></div></footer>
+  <a class="back-top" href="#start" aria-label="Back to top">Top ↑</a>
+  <dialog class="image-viewer" id="image-viewer" aria-label="Expanded result image" aria-describedby="viewer-caption">
+    <div class="viewer-toolbar"><a id="viewer-original" target="_blank" rel="noopener">Open full image ↗</a><button type="button" class="viewer-close" id="viewer-close" autofocus>Close ×</button></div>
+    <div class="viewer-scroll"><img id="viewer-image" alt=""></div><p class="viewer-caption" id="viewer-caption"></p>
+  </dialog>
+</body>
+</html>
