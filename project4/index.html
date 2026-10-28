@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Zian Pan's CS 280A Project 4 Part A: homographies, image rectification, two-layer blending, and cylindrical panoramas.">
+  <meta name="theme-color" content="#f8f6ef">
+  <title>CS 280A Project 4: Image Warping and Mosaicing</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<nav class="site-nav" aria-label="Primary navigation"><div class="nav-inner">
+  <a class="brand" href="https://zian-pan.github.io/" aria-label="Back to Zian Pan's portfolio"><span class="brand-mark" aria-hidden="true"></span><span>CS 280A</span></a>
+  <div class="nav-links"><a href="#start" aria-current="location">Start</a><a href="#photographs">Photos</a><a href="#geometry">Geometry</a><a href="#rectification">Rectification</a><a href="#mosaics">Mosaics</a><a href="#cylindrical">Cylindrical</a></div>
+</div></nav>
+<main id="main">
+<header class="hero" id="start">
+  <div class="eyebrow">CS 280A / Project 4 / Part A</div>
+  <h1>Image Warping<br>and Mosaicing</h1>
+  <p class="hero-copy">This project starts with matching points between photos. From there, I correct perspective, build panoramas, and compare how interpolation and projection affect the results.</p>
+  <div class="hero-meta"><span>Zian Pan</span><span>Manual correspondences</span><span>Fall 2026</span></div>
+  <div class="part-links">
+    <a class="part-link" href="#rectification"><span class="figure-label">Image rectification</span><strong>A book and a Sudoku grid ↓</strong><p>Nearest neighbor and bilinear interpolation, with measured running times.</p></a>
+    <a class="part-link" href="#mosaics"><span class="figure-label">Image mosaics</span><strong>Campus and river panoramas ↓</strong><p>What joins well, where the overlap fails, and how the projection changes the view.</p></a>
+  </div>
+  <figure class="image-card hero-figure">
+  <a class="image-link" href="media/planar_3_images.png" data-lightbox data-caption="Campus street corner (864 × 531 px)" aria-label="Enlarge: Campus street corner">
+    <img src="media/planar_3_images.png" alt="A wide street panorama showing the construction-covered building, cars, and crossing." width="864" height="531" loading="eager" decoding="async">
+  </a>
+  <figcaption><strong>Campus street corner</strong><span>Three photos joined with a planar homography.</span></figcaption>
+</figure>
+</header>
+
+<section class="section soft" id="photographs"><div class="section-inner">
+  <div class="section-head"><span class="section-label">A.1 Photos</span><h2>The input photos</h2><p>I took two sets of three photos on campus: a street corner and a building beside a lawn. The boat pair is from the Internet. The book and Sudoku photos are the supplied rectification inputs.</p><p>The views overlap enough to share roof corners, windows, and poles. A single homography can align a flat surface, or views taken by rotating the camera around one fixed point. Objects at different distances are harder to align if the camera also changes position.</p></div>
+  <article class="subsection" id="sources-self_test2"><div class="subhead"><h3>Street corner</h3></div><div class="image-grid three sources"><figure class="image-card ">
+  <a class="image-link" href="media/self_test2_1.jpg" data-lightbox data-caption="Left view (1707 × 1280 px)" aria-label="Enlarge: Left view">
+    <img src="media/self_test2_1.jpg" alt="A campus street with parked cars and the left side of a building covered in construction mesh." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Left view</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/self_test2_2.jpg" data-lightbox data-caption="Middle view (reference) (1707 × 1280 px)" aria-label="Enlarge: Middle view (reference)">
+    <img src="media/self_test2_2.jpg" alt="The front of the mesh-covered building, cars, and a utility pole at a crossing." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Middle view (reference)</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/self_test2_3.jpg" data-lightbox data-caption="Right view (1707 × 1280 px)" aria-label="Enlarge: Right view">
+    <img src="media/self_test2_3.jpg" alt="A crossing beside the campus building, with a palm tree on the right." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Right view</strong></figcaption>
+</figure></div></article><article class="subsection" id="sources-self_test"><div class="subhead"><h3>Building and lawn</h3></div><div class="image-grid three sources"><figure class="image-card ">
+  <a class="image-link" href="media/self_test_1.jpg" data-lightbox data-caption="Left view (1707 × 1280 px)" aria-label="Enlarge: Left view">
+    <img src="media/self_test_1.jpg" alt="The front windows and left entrance of a stone campus building." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Left view</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/self_test_2.jpg" data-lightbox data-caption="Middle view (reference) (1707 × 1280 px)" aria-label="Enlarge: Middle view (reference)">
+    <img src="media/self_test_2.jpg" alt="The stone building behind a lawn, a large tree, and a tall lamp pole." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Middle view (reference)</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/self_test_3.jpg" data-lightbox data-caption="Right view (1707 × 1280 px)" aria-label="Enlarge: Right view">
+    <img src="media/self_test_3.jpg" alt="The right side of the building and people walking along a tree-lined path." width="1707" height="1280" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Right view</strong></figcaption>
+</figure></div></article>
+  <article class="subsection" id="sources-boat"><div class="subhead"><h3>Boat and riverbank</h3></div><div class="image-grid sources"><figure class="image-card ">
+  <a class="image-link" href="media/boat1_test.jpg" data-lightbox data-caption="Left view (3888 × 2592 px)" aria-label="Enlarge: Left view">
+    <img src="media/boat1_test.jpg" alt="A sailing ship moored beside buildings, with a golden tower across the river." width="3888" height="2592" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Left view</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/boat2_test.jpg" data-lightbox data-caption="Right view (reference) (3888 × 2592 px)" aria-label="Enlarge: Right view (reference)">
+    <img src="media/boat2_test.jpg" alt="A golden tower, trees, and waterfront buildings reflected in the river." width="3888" height="2592" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Right view (reference)</strong></figcaption>
+</figure></div></article>
+  <div class="table-wrap"><table><caption>Image sizes used for processing (width × height)</caption><thead><tr><th scope="col">Set</th><th scope="col">Original</th><th scope="col">Working size</th><th scope="col">Sampling</th></tr></thead><tbody><tr><td>Both campus sets</td><td>1707 × 1280</td><td>427 × 320</td><td>Every fourth pixel</td></tr><tr><td>Boat pair</td><td>3888 × 2592</td><td>972 × 648</td><td>Every fourth pixel</td></tr></tbody></table></div>
+  <p class="small-note">The boat results on this page were regenerated with ten newly selected point pairs and scale = 4. The original boat point file and run settings are no longer available. The sizes above describe the new run. The campus results are the supplied outputs.</p>
+</div></section>
+
+<section class="section" id="geometry"><div class="section-inner">
+  <div class="section-head"><span class="section-label">A.2 Homographies</span><h2>Finding the homography</h2><p>I selected ten matching point pairs in each example below. The numbers mark the same scene locations in both views. A 3 × 3 matrix, H, maps the source coordinates to the reference view.</p></div>
+  <div class="image-grid"><figure class="image-card ">
+  <a class="image-link" href="media/correspondences.png" data-lightbox data-caption="Street corner (1997 × 1123 px)" aria-label="Enlarge: Street corner">
+    <img src="media/correspondences.png" alt="Two street-corner photos with ten numbered matching points on roof corners and poles." width="1997" height="1123" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Street corner</strong><span>Right source photo on the left; middle reference photo on the right.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/correspondences2.png" data-lightbox data-caption="Building and lawn (1997 × 1123 px)" aria-label="Enlarge: Building and lawn">
+    <img src="media/correspondences2.png" alt="Two photos of the stone building with ten numbered matching points." width="1997" height="1123" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Building and lawn</strong><span>The same ten scene points are numbered in both views.</span></figcaption>
+</figure></div>
+  <article class="subsection"><div class="subhead"><h3>From points to a matrix</h3></div><p>Setting the bottom-right value of H to 1 leaves eight unknowns. A source point (x, y) and its reference point (u, v) satisfy:</p>
+    <div class="formula"><div class="equation">u = (h<sub>11</sub>x + h<sub>12</sub>y + h<sub>13</sub>) / (h<sub>31</sub>x + h<sub>32</sub>y + 1)</div><div class="equation">v = (h<sub>21</sub>x + h<sub>22</sub>y + h<sub>23</sub>) / (h<sub>31</sub>x + h<sub>32</sub>y + 1)</div></div>
+    <p>Each point pair gives two linear equations. Ten pairs give 20 equations for eight unknowns, so I solve Ah = b with least squares. This uses all the selected points instead of fitting only four pairs exactly.</p>
+    <div class="formula" role="group" aria-label="Two linear equations from one correspondence"><div class="linear-system"><div class="system-matrix"><span>x</span><span>y</span><span>1</span><span>0</span><span>0</span><span>0</span><span>−ux</span><span>−uy</span><span>0</span><span>0</span><span>0</span><span>x</span><span>y</span><span>1</span><span>−vx</span><span>−vy</span></div><span>h =</span><span>(u, v)<sup>T</sup></span></div><p class="formula-caption">h = (h<sub>11</sub>, h<sub>12</sub>, h<sub>13</sub>, h<sub>21</sub>, h<sub>22</sub>, h<sub>23</sub>, h<sub>31</sub>, h<sub>32</sub>)<sup>T</sup></p></div>
+  </article>
+  <article class="subsection"><div class="subhead"><h3>Two fitted matrices</h3></div><p>These matrices map the right photo into the middle photo. Errors are measured over the ten selected pairs at the working resolution.</p>
+  <div class="matrix-section">
+    <div class="matrix-card"><h4>Street corner, right to middle</h4><div class="matrix" role="math" aria-label="Street corner homography"><span>0.577107</span><span>0.103012</span><span>113.462351</span><span>−0.228690</span><span>0.866469</span><span>41.668244</span><span>−0.001042193</span><span>0.000202865</span><span>1</span></div><div class="metrics">Mean error: 0.928 px; maximum: 2.091 px</div></div>
+    <div class="matrix-card"><h4>Building and lawn, right to middle</h4><div class="matrix" role="math" aria-label="Building and lawn homography"><span>0.462332</span><span>0.030966</span><span>144.648755</span><span>−0.297565</span><span>0.726548</span><span>67.675500</span><span>−0.001163035</span><span>−0.000261535</span><span>1</span></div><div class="metrics">Mean error: 1.203 px; maximum: 2.033 px</div></div>
+  </div><p class="small-note">These errors check the selected points. They do not measure alignment across the whole scene.</p></article>
+</div></section>
+
+<section class="section soft" id="rectification"><div class="section-inner">
+  <div class="section-head"><span class="section-label">A.3 Rectification</span><h2>Rectifying two images</h2><p>I map four selected corners to a rectangle. The warp works backward: for each output pixel, H<sup>−1</sup> gives a position in the source photo. After dividing by the last coordinate, I sample the color at that position.</p></div>
+  <div class="formula"><div class="equation">(x, y, w)<sup>T</sup> = H<sup>−1</sup>(u, v, 1)<sup>T</sup></div><div class="equation">Source position = (x / w, y / w)</div></div>
+  <article class="subsection"><div class="subhead"><h3>Book cover</h3></div><p>Output: 600 × 450 px.</p><div class="image-grid three rectified"><figure class="image-card ">
+  <a class="image-link" href="media/book1.jpg" data-lightbox data-caption="Original (600 × 800 px)" aria-label="Enlarge: Original">
+    <img src="media/book1.jpg" alt="A blue Computer Vision textbook lying at an angle on a round table." width="600" height="800" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Original</strong><span>The cover is photographed from an angle.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/book_nearest.png" data-lightbox data-caption="Nearest neighbor (600 × 450 px)" aria-label="Enlarge: Nearest neighbor">
+    <img src="media/book_nearest.png" alt="A rectangular view of the blue book cover, with white lettering and a yellow illustration." width="600" height="450" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Nearest neighbor</strong><span>Steps are visible along the white title and yellow border.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/book_bilinear.png" data-lightbox data-caption="Bilinear (600 × 450 px)" aria-label="Enlarge: Bilinear">
+    <img src="media/book_bilinear.png" alt="The blue book cover after bilinear rectification, with the title along the right side." width="600" height="450" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Bilinear</strong><span>The same edges are smoother; small print loses contrast.</span></figcaption>
+</figure></div><p>The cover becomes rectangular. Along the white title and yellow border, bilinear interpolation reduces the stair-step edges visible in the nearest-neighbor result. The smallest print remains blurred.</p></article><article class="subsection"><div class="subhead"><h3>Sudoku grid</h3></div><p>Output: 500 × 500 px.</p><div class="image-grid three rectified"><figure class="image-card ">
+  <a class="image-link" href="media/sudoku.jpeg" data-lightbox data-caption="Original (481 × 512 px)" aria-label="Enlarge: Original">
+    <img src="media/sudoku.jpeg" alt="A photographed Sudoku sheet on patterned fabric, with the grid seen at an angle." width="481" height="512" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Original</strong><span>The rows and columns are tilted by perspective.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/sudoku_nearest.png" data-lightbox data-caption="Nearest neighbor (500 × 500 px)" aria-label="Enlarge: Nearest neighbor">
+    <img src="media/sudoku_nearest.png" alt="A rectified Sudoku grid with horizontal rows, vertical columns, and dark printed digits." width="500" height="500" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Nearest neighbor</strong><span>Straight grid lines with jagged edges at pixel level.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/sudoku_bilinear.png" data-lightbox data-caption="Bilinear (500 × 500 px)" aria-label="Enlarge: Bilinear">
+    <img src="media/sudoku_bilinear.png" alt="The rectified Sudoku sheet with straight grid lines inside a square image." width="500" height="500" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Bilinear</strong><span>Smoother grid lines and digits, with less crisp thin strokes.</span></figcaption>
+</figure></div><p>The perspective tilt is removed: the rows are horizontal and the columns are vertical. The grid remains wider than it is tall, so its proportions are not fully restored. The printed digits are readable in both results.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Interpolation and running time</h3></div><p>Nearest neighbor copies the closest source pixel. Bilinear interpolation mixes the four pixels around the source position, with more weight on closer pixels. This smooths diagonal edges, but can reduce contrast in thin lines and small letters.</p>
+  <div class="formula"><div class="equation">I(x, y) ≈ (1 − α)(1 − β) I<sub>00</sub> + α(1 − β) I<sub>10</sub></div><div class="equation">+ (1 − α)β I<sub>01</sub> + αβ I<sub>11</sub></div><p class="formula-caption">α and β are the fractional distances from the upper-left pixel in the x and y directions.</p></div>
+  <div class="table-wrap"><table><caption>Measured time for the warp alone, median of five runs</caption><thead><tr><th scope="col">Image</th><th scope="col">Output size</th><th scope="col">Nearest neighbor</th><th scope="col">Bilinear</th><th scope="col">Time ratio</th></tr></thead><tbody><tr><td>Book</td><td>600 × 450</td><td>0.482 s</td><td>1.083 s</td><td>2.25×</td></tr><tr><td>Sudoku</td><td>500 × 500</td><td>0.434 s</td><td>0.987 s</td><td>2.28×</td></tr></tbody></table></div>
+  <p>Bilinear took about 2.2–2.3 times as long in these tests. I would use it for the final images because the book title and grid edges are smoother. Nearest neighbor is useful for a quick preview when rough edges are acceptable.</p>
+  <details><summary>Timing setup and enlarged edges</summary><div class="details-body"><p class="small-note">Measured with time.perf_counter on an Apple M5 MacBook Air, Python 3.11.7 and NumPy 1.26.4. I used the warp functions in main.py without changing them. Each method had one warm-up and five measured runs, with the order alternated. Loading, selecting points, plotting, and saving were excluded. The original rectification points were not saved, so I fitted H from matching pixels in the source and saved nearest-neighbor image. Both methods used this same fixed H within each test.</p><div class="detail-grid"><div><span class="detail-label">Book, nearest neighbor (3×)</span><div class="detail-window"><img src="media/book_nearest.png" alt="Central book detail showing printed edges under nearest neighbor interpolation" loading="lazy"></div></div><div><span class="detail-label">Book, bilinear (3×)</span><div class="detail-window"><img src="media/book_bilinear.png" alt="Central book detail showing printed edges under bilinear interpolation" loading="lazy"></div></div><div><span class="detail-label">Sudoku, nearest neighbor (3×)</span><div class="detail-window"><img src="media/sudoku_nearest.png" alt="Central sudoku detail showing printed edges under nearest neighbor interpolation" loading="lazy"></div></div><div><span class="detail-label">Sudoku, bilinear (3×)</span><div class="detail-window"><img src="media/sudoku_bilinear.png" alt="Central sudoku detail showing printed edges under bilinear interpolation" loading="lazy"></div></div></div></div></details>
+  </article>
+</div></section>
+
+<section class="section" id="mosaics"><div class="section-inner">
+  <div class="section-head"><span class="section-label">A.4 Mosaics</span><h2>Combining the photos</h2><p>I use the middle photo as the reference for each campus set, and the second photo for the boat pair. Mapping the source corners gives the full output bounds. A translation moves those bounds into the canvas, and bilinear interpolation fills the warped photos and weight maps.</p></div>
+  <article class="subsection"><div class="subhead"><h3>Blending the overlap</h3></div><p>Pixels farther from a source edge get more weight. From these weights, I form a mask m for the existing image:</p>
+  <div class="formula"><div class="equation">a = w<sub>existing</sub> / (w<sub>existing</sub> + w<sub>new</sub>)</div><div class="equation">m = a<sup>3</sup> / (a<sup>3</sup> + (1 − a)<sup>3</sup>)</div></div>
+  <p>The blend uses a two-layer stack, with both layers at the same canvas size. A 13 × 13 Gaussian filter with σ = 2 gives the low-frequency layer; subtracting it from the image gives the high-frequency residual. I blend the low-frequency layers with a Gaussian-smoothed mask and the residuals with the original mask, then add the two results.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Campus street corner</h3></div><figure class="image-card wide-result">
+  <a class="image-link" href="media/planar_3_images.png" data-lightbox data-caption="Street corner, planar mosaic (864 × 531 px)" aria-label="Enlarge: Street corner, planar mosaic">
+    <img src="media/planar_3_images.png" alt="A wide street panorama showing the construction-covered building, cars, and crossing." width="864" height="531" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Street corner, planar mosaic</strong><span>The full street view, including the unsupported traffic light at the upper left.</span></figcaption>
+</figure><p>The main roof and tall utility pole join closely. Around the white SUV and gray car, the roof and front edges split into two outlines. The small signs behind them fade into the overlap, and the white road markings break near the bottom.</p><p>At the upper left, the traffic light ends in midair because its support lies outside the captured area. Blending cannot fill that missing part.</p><div class="image-grid"><figure class="image-card">
+  <a class="image-link result-crop" href="media/planar_3_images.png" data-lightbox data-caption="Cars in the overlap" aria-label="Open full image: Cars in the overlap" style="aspect-ratio:225/125">
+    <img src="media/planar_3_images.png" alt="Enlarged white SUV and gray car in the center of the street panorama." loading="lazy" style="width:384.000000%;left:-140.000000%;top:-236.000000%">
+  </a><figcaption><strong>Cars in the overlap</strong><span>Two outlines are visible around the SUV and gray car.</span></figcaption>
+</figure><figure class="image-card">
+  <a class="image-link result-crop" href="media/planar_3_images.png" data-lightbox data-caption="Upper-left traffic light" aria-label="Open full image: Upper-left traffic light" style="aspect-ratio:205/115">
+    <img src="media/planar_3_images.png" alt="A traffic light entering the upper-left edge of the panorama against the blue sky." loading="lazy" style="width:421.463415%;left:-21.951220%;top:-56.521739%">
+  </a><figcaption><strong>Upper-left traffic light</strong><span>The light is cut off from its support.</span></figcaption>
+</figure></div></article>
+  <article class="subsection"><div class="subhead"><h3>Campus building and lawn</h3></div><figure class="image-card wide-result">
+  <a class="image-link" href="media/self_test_planar.png" data-lightbox data-caption="Building and lawn, planar mosaic (1411 × 558 px)" aria-label="Enlarge: Building and lawn, planar mosaic">
+    <img src="media/self_test_planar.png" alt="A wide panorama of the stone building and lawn, with stretched trees at both sides." width="1411" height="558" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Building and lawn, planar mosaic</strong><span>The center windows and the trees at the sides show different kinds of detail loss.</span></figcaption>
+</figure><p>The building spans the full view, with strong stretching at both ends. In the middle, several window frames have double edges and the wall loses detail. The trees and people beside the right path are also blurred by the stretched view. The reduced working size limits detail before the photos are even warped.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Boat and riverbank</h3></div><figure class="image-card wide-result">
+  <a class="image-link" href="media/boat_planar.png" data-lightbox data-caption="Boat, planar mosaic (1461 × 766 px)" aria-label="Enlarge: Boat, planar mosaic">
+    <img src="media/boat_planar.png" alt="A planar river panorama with a sailing ship on the left and a golden tower near the middle." width="1461" height="766" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Boat, planar mosaic</strong><span>The ship and tower reflected in the river.</span></figcaption>
+</figure><p>The ship and golden tower remain easy to recognize. Along the middle of the riverbank, branches and building edges mix together; the water also changes brightness across the overlap. Compared with the campus sets, this distant scene has fewer large foreground objects to align.</p><p class="small-note">New output: 1461 × 766 px, saved directly from the mosaic array.</p></article>
+  <p>Blending can hide a color boundary, but it cannot align two misplaced edges. Their average may become a double outline or a blurred patch. Point-selection error, a change in camera position, and scene movement are possible causes here.</p><p class="small-note">Black areas have no source image data.</p>
+</div></section>
+
+<section class="section soft" id="cylindrical"><div class="section-inner">
+  <div class="section-head"><span class="section-label">A.5 Cylindrical mapping</span><h2>Changing the projection</h2><p>A planar panorama stretches the outer views. Cylindrical mapping wraps each photo around a cylinder, reducing this stretching. With coordinates centered at (c<sub>x</sub>, c<sub>y</sub>), the mapping is:</p></div>
+  <div class="formula"><div class="equation">x = x<sub>pixel</sub> − c<sub>x</sub>, &nbsp; y = y<sub>pixel</sub> − c<sub>y</sub></div><div class="equation">u = f arctan(x / f), &nbsp; v = fy / √(x<sup>2</sup> + f<sup>2</sup>)</div><p class="formula-caption">f is the cylinder radius in pixels, set to 0.8 times the width of the reference working image.</p></div>
+  <p>I project the selected points and use their median coordinate difference to estimate a shift for each view. To sample the image, I subtract this shift and map the cylinder coordinates back to the source photo:</p>
+  <div class="formula"><div class="equation">x<sub>pixel</sub> = f tan(u / f) + c<sub>x</sub>, &nbsp; y<sub>pixel</sub> = v / cos(u / f) + c<sub>y</sub></div><p class="formula-caption">The source colors use bilinear interpolation and the same two-layer blend.</p></div>
+  <article class="subsection"><div class="subhead"><h3>Building and lawn</h3></div><div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/self_test_planar.png" data-lightbox data-caption="Planar (1411 × 558 px)" aria-label="Enlarge: Planar">
+    <img src="media/self_test_planar.png" alt="A wide panorama of the stone building and lawn, with stretched trees at both sides." width="1411" height="558" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Planar</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/self_test_cylindrical.png" data-lightbox data-caption="Cylindrical (677 × 357 px)" aria-label="Enlarge: Cylindrical">
+    <img src="media/self_test_cylindrical.png" alt="A curved panorama of the campus building, lawn, trees, and tall lamp pole." width="677" height="357" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Cylindrical</strong></figcaption>
+</figure></div><p>Cylindrical mapping keeps the building closer to its original shape. The tall lamp pole now appears twice, with separated heads and overlapping lower sections. There is also a second roof edge on the right side of the building. Across the upper sky, the brightness changes in bands where the views meet. The planar result aligns the pole more closely.</p></article>
+  <div class="image-grid lamp-comparison"><figure class="image-card">
+  <a class="image-link result-crop" href="media/self_test_planar.png" data-lightbox data-caption="Planar lamp pole" aria-label="Open full image: Planar lamp pole" style="aspect-ratio:200/200">
+    <img src="media/self_test_planar.png" alt="Enlarged lamp head above the trees in the planar building panorama." loading="lazy" style="width:705.500000%;left:-450.000000%;top:-70.000000%">
+  </a><figcaption><strong>Planar lamp pole</strong><span>One head and a single main outline.</span></figcaption>
+</figure><figure class="image-card">
+  <a class="image-link result-crop" href="media/self_test_cylindrical.png" data-lightbox data-caption="Cylindrical lamp pole" aria-label="Open full image: Cylindrical lamp pole" style="aspect-ratio:230/230">
+    <img src="media/self_test_cylindrical.png" alt="Two lamp heads and overlapping poles above the trees in the cylindrical panorama." loading="lazy" style="width:294.347826%;left:-186.956522%;top:-4.347826%">
+  </a><figcaption><strong>Cylindrical lamp pole</strong><span>The two source views leave separate lamp heads.</span></figcaption>
+</figure></div>
+  <article class="subsection"><div class="subhead"><h3>Street corner</h3></div><div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/planar_3_images.png" data-lightbox data-caption="Planar (864 × 531 px)" aria-label="Enlarge: Planar">
+    <img src="media/planar_3_images.png" alt="A wide street panorama showing the construction-covered building, cars, and crossing." width="864" height="531" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Planar</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/cylindrical_3_images.png" data-lightbox data-caption="Cylindrical (558 × 338 px)" aria-label="Enlarge: Cylindrical">
+    <img src="media/cylindrical_3_images.png" alt="A cylindrical street panorama with cars, the mesh-covered building, and a curved road." width="558" height="338" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Cylindrical</strong></figcaption>
+</figure></div><p>The cylindrical view is more compact and the road bends across the bottom. It does not fix the overlap around the cars and signs. For this set, the main gain is the shape of the outer views.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Boat and riverbank</h3></div><div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/boat_planar.png" data-lightbox data-caption="Planar (1461 × 766 px)" aria-label="Enlarge: Planar">
+    <img src="media/boat_planar.png" alt="A planar river panorama with a sailing ship on the left and a golden tower near the middle." width="1461" height="766" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Planar</strong></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/boat_cylindrical.png" data-lightbox data-caption="Cylindrical (1145 × 652 px)" aria-label="Enlarge: Cylindrical">
+    <img src="media/boat_cylindrical.png" alt="A cylindrical river panorama with the ship, tower, clouds, and reflections." width="1145" height="652" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Cylindrical</strong></figcaption>
+</figure></div><p>The cylindrical view reduces the stretch on the left and gives the river a more balanced shape. The trees and low buildings to the left of the golden tower have mixed edges, and the tower is less sharp than in the planar version. I prefer the cylindrical outline, but the planar image keeps more detail around the tower.</p></article><p class="small-note">New cylindrical output: 1145 × 652 px; f = 777.6 px.</p>
+  <p class="small-note">The cylindrical alignment uses shifts only. It does not correct changes in camera tilt or position.</p>
+</div></section>
+
+<section class="section" id="reflection"><div class="section-inner">
+  <div class="learn-card"><h2>What I learned</h2><div><p>Getting the points to line up is only part of the problem. The camera position and the depth of the scene matter too. I noticed this most in the campus photos, where nearby objects do not always follow the same warp as the building.</p><p>The projection also needs to suit the scene. I prefer the cylindrical shape for the wider building view, while its repeated roof and pole show the limits of using shifts alone. Better capture and point selection would help more than stronger blending.</p></div></div>
+</div></section>
+</main>
+<footer><div class="footer-inner"><span>Zian Pan / CS 280A / Project 4 Part A</span><span>Image Warping and Mosaicing</span></div></footer>
+<a class="back-top" href="#start" hidden aria-label="Back to top">↑ Top</a>
+<dialog class="image-viewer" id="image-viewer" aria-label="Enlarged project image" aria-describedby="viewer-caption">
+  <div class="viewer-toolbar"><a id="viewer-original" href="media/planar_3_images.png" target="_blank" rel="noopener">Open full-resolution image ↗</a><button class="viewer-close" id="viewer-close" type="button" autofocus>Close ×</button></div>
+  <div class="viewer-scroll"><img id="viewer-image" alt=""></div><p class="viewer-caption" id="viewer-caption"></p>
+</dialog>
+</body>
+</html>
