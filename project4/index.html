@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Zian Pan's CS 280A Project 4 Part A: homographies, image rectification, two-layer blending, and cylindrical panoramas.">
+  <meta name="description" content="Zian Pan's CS 280A Project 4 Parts A and B: image warping, mosaics, Harris corners, feature matching, RANSAC, and multiscale autostitching.">
   <meta name="theme-color" content="#f8f6ef">
-  <title>CS 280A Project 4: Image Warping and Mosaicing</title>
+  <title>CS 280A Project 4: Image Warping, Mosaicing and Autostitching</title>
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
 </head>
@@ -13,17 +13,17 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <nav class="site-nav" aria-label="Primary navigation"><div class="nav-inner">
   <a class="brand" href="https://zian-pan.github.io/" aria-label="Back to Zian Pan's portfolio"><span class="brand-mark" aria-hidden="true"></span><span>CS 280A</span></a>
-  <div class="nav-links"><a href="#start" aria-current="location">Start</a><a href="#photographs">Photos</a><a href="#geometry">Geometry</a><a href="#rectification">Rectification</a><a href="#mosaics">Mosaics</a><a href="#cylindrical">Cylindrical</a></div>
+  <div class="nav-links"><a href="#start" aria-current="location">Start</a><a href="#photographs">Part A</a><a href="#geometry">Geometry</a><a href="#mosaics">Mosaics</a><a href="#autostitch">Part B</a><a href="#automatic-mosaics">Auto results</a><a href="#multiscale">Multiscale</a></div>
 </div></nav>
 <main id="main">
 <header class="hero" id="start">
-  <div class="eyebrow">CS 280A / Project 4 / Part A</div>
+  <div class="eyebrow">CS 280A / Project 4 / Parts A &amp; B</div>
   <h1>Image Warping<br>and Mosaicing</h1>
-  <p class="hero-copy">This project starts with matching points between photos. From there, I correct perspective, build panoramas, and compare how interpolation and projection affect the results.</p>
-  <div class="hero-meta"><span>Zian Pan</span><span>Manual correspondences</span><span>Fall 2026</span></div>
+  <p class="hero-copy">I start by clicking matching points to warp and join photos. Then I build an automatic pipeline that finds corners, matches image patches, and uses RANSAC to stitch the same scenes.</p>
+  <div class="hero-meta"><span>Zian Pan</span><span>Manual → automatic alignment</span><span>Fall 2026</span></div>
   <div class="part-links">
-    <a class="part-link" href="#rectification"><span class="figure-label">Image rectification</span><strong>A book and a Sudoku grid ↓</strong><p>Nearest neighbor and bilinear interpolation, with measured running times.</p></a>
-    <a class="part-link" href="#mosaics"><span class="figure-label">Image mosaics</span><strong>Campus and river panoramas ↓</strong><p>What joins well, where the overlap fails, and how the projection changes the view.</p></a>
+    <a class="part-link" href="#photographs"><span class="figure-label">Part A / Image warping and mosaicing</span><strong>Manual stitching ↓</strong><p>Homographies, image rectification, blending, and cylindrical projection.</p></a>
+    <a class="part-link" href="#autostitch"><span class="figure-label">Part B / Feature matching for autostitching</span><strong>Automatic stitching ↓</strong><p>Harris corners, patch descriptors, RANSAC, and a multiscale extension.</p></a>
   </div>
   <figure class="image-card hero-figure">
   <a class="image-link" href="media/planar_3_images.png" data-lightbox data-caption="Campus street corner (864 × 531 px)" aria-label="Enlarge: Campus street corner">
@@ -78,7 +78,7 @@
   <figcaption><strong>Right view (reference)</strong></figcaption>
 </figure></div></article>
   <div class="table-wrap"><table><caption>Image sizes used for processing (width × height)</caption><thead><tr><th scope="col">Set</th><th scope="col">Original</th><th scope="col">Working size</th><th scope="col">Sampling</th></tr></thead><tbody><tr><td>Both campus sets</td><td>1707 × 1280</td><td>427 × 320</td><td>Every fourth pixel</td></tr><tr><td>Boat pair</td><td>3888 × 2592</td><td>972 × 648</td><td>Every fourth pixel</td></tr></tbody></table></div>
-  <p class="small-note">The boat results on this page were regenerated with ten newly selected point pairs and scale = 4. The original boat point file and run settings are no longer available. The sizes above describe the new run. The campus results are the supplied outputs.</p>
+  <p class="small-note">The Part A boat results were regenerated with ten newly selected point pairs and scale = 4. The original boat point file and run settings are no longer available. The sizes above describe the new run. The campus results are the supplied outputs.</p>
 </div></section>
 
 <section class="section" id="geometry"><div class="section-inner">
@@ -233,10 +233,138 @@
 </div></section>
 
 <section class="section" id="reflection"><div class="section-inner">
-  <div class="learn-card"><h2>What I learned</h2><div><p>Getting the points to line up is only part of the problem. The camera position and the depth of the scene matter too. I noticed this most in the campus photos, where nearby objects do not always follow the same warp as the building.</p><p>The projection also needs to suit the scene. I prefer the cylindrical shape for the wider building view, while its repeated roof and pole show the limits of using shifts alone. Better capture and point selection would help more than stronger blending.</p></div></div>
+  <div class="learn-card"><h2>What I learned<br>in Part A</h2><div><p>Getting the points to line up is only part of the problem. The camera position and the depth of the scene matter too. I noticed this most in the campus photos, where nearby objects do not always follow the same warp as the building.</p><p>The projection also needs to suit the scene. I prefer the cylindrical shape for the wider building view, while its repeated roof and pole show the limits of using shifts alone. Better capture and point selection would help more than stronger blending.</p></div></div>
 </div></section>
+
+<section class="section soft part-b-intro" id="autostitch"><div class="section-inner">
+  <div class="section-head"><span class="section-label">Part B / Feature matching for autostitching</span><h2>Automatic image stitching</h2><p>For Part B, I replaced the clicked points with matched image features. I used Harris corners, normalized patch descriptors, and RANSAC to estimate the homographies.</p><p>I used the <a href="#photographs">same three photo sets</a> as in Part A and kept the warping and blending functions.</p></div>
+  <nav class="section-nav" aria-label="Part B sections"><a href="#corners">B.1 Corners ↓</a><a href="#descriptors">B.2 Descriptors ↓</a><a href="#matching">B.3 Matching ↓</a><a href="#ransac">B.4 RANSAC ↓</a><a href="#multiscale">B.5 Multiscale ↓</a></nav>
+  <ol class="pipeline" aria-label="Automatic stitching pipeline"><li><span>01</span><strong>Find corners</strong><p>Harris + ANMS</p></li><li><span>02</span><strong>Describe patches</strong><p>40 × 40 → 8 × 8</p></li><li><span>03</span><strong>Match features</strong><p>Nearest-neighbor ratio</p></li><li><span>04</span><strong>Estimate &amp; stitch</strong><p>RANSAC + Part A blend</p></li></ol>
+</div></section>
+
+<section class="section" id="corners"><div class="section-inner">
+  <div class="section-head"><span class="section-label">B.1 Harris corners and ANMS</span><h2>Harris corners and ANMS</h2><p>I used the provided Harris code at a single scale and removed corners within 20 pixels of the image edge. It returned 12,806 points for the left building photo, including many closely spaced points in the sky.</p><p>I kept 500 points with Adaptive Non-Maximal Suppression (ANMS). For each point, I found the distance to the nearest corner satisfying the response condition below. I then selected the points with the largest distances.</p></div>
+  <div class="formula"><div class="equation">r<sub>i</sub> = min<sub>j</sub> ‖x<sub>i</sub> − x<sub>j</sub>‖, &nbsp; where f<sub>i</sub> &lt; 0.9 f<sub>j</sub></div><p class="formula-caption">A corner with no sufficiently stronger neighbor has an infinite radius and is kept first.</p></div>
+  <div class="image-grid"><figure class="image-card ">
+  <a class="image-link" href="media/part2/harris.png" data-lightbox data-caption="Before ANMS: 12,806 Harris corners (853 × 640 px)" aria-label="Enlarge: Before ANMS: 12,806 Harris corners">
+    <img src="media/part2/harris.png" alt="Dense red Harris points over the left building photo, including the sky and stone facade." width="853" height="640" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Before ANMS: 12,806 Harris corners</strong><span>All detected corners after the edge margin is removed.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/part2/anms.png" data-lightbox data-caption="After ANMS: 500 selected corners (853 × 640 px)" aria-label="Enlarge: After ANMS: 500 selected corners">
+    <img src="media/part2/anms.png" alt="Five hundred blue points distributed across the building, trees, and sky." width="853" height="640" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>After ANMS: 500 selected corners</strong><span>The selected points remain spread over the image.</span></figcaption>
+</figure></div>
+  <p>Some selected points are still in the sky or on repeated windows, so ANMS alone is not enough for reliable matching.</p>
+</div></section>
+
+<section class="section soft" id="descriptors"><div class="section-inner">
+  <div class="section-head"><span class="section-label">B.2 Feature descriptors</span><h2>Extracting feature descriptors</h2><p>I converted the image to grayscale and blurred it with a Gaussian filter (σ = 2). For each corner, I sampled an axis-aligned 8 × 8 patch from a 40 × 40 window, using a spacing of 5 pixels. Each descriptor contains 64 values.</p><p>I normalized each descriptor by subtracting its mean and dividing by its standard deviation. This makes the comparison less sensitive to brightness and contrast differences. I skipped patches with almost no variation.</p></div>
+  <div class="formula"><div class="equation">d = (p − μ<sub>p</sub>) / σ<sub>p</sub></div><p class="formula-caption">Each retained descriptor has mean 0 and standard deviation 1. No rotation or wavelet transform is used.</p></div>
+  <div class="descriptor-grid"><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_1.png" data-lightbox data-caption="Feature 1: 40 × 40 window" aria-label="Enlarge feature 1: 40 × 40 window"><img src="media/part2/patch_1.png" alt="Original color window around the selected building feature, feature 1" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_1.png" data-lightbox data-caption="Feature 1: 8 × 8 descriptor" aria-label="Enlarge feature 1: 8 × 8 descriptor"><img src="media/part2/descriptor_1.png" alt="Grayscale blocks of a normalized feature descriptor, feature 1" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 1</strong><span>Left building photo, (x, y) = (722, 586).</span></figcaption></figure><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_2.png" data-lightbox data-caption="Feature 2: 40 × 40 window" aria-label="Enlarge feature 2: 40 × 40 window"><img src="media/part2/patch_2.png" alt="Original color window around the selected building feature, feature 2" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_2.png" data-lightbox data-caption="Feature 2: 8 × 8 descriptor" aria-label="Enlarge feature 2: 8 × 8 descriptor"><img src="media/part2/descriptor_2.png" alt="Grayscale blocks of a normalized feature descriptor, feature 2" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 2</strong><span>Left building photo, (x, y) = (631, 312).</span></figcaption></figure><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_3.png" data-lightbox data-caption="Feature 3: 40 × 40 window" aria-label="Enlarge feature 3: 40 × 40 window"><img src="media/part2/patch_3.png" alt="Original color window around the selected building feature, feature 3" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_3.png" data-lightbox data-caption="Feature 3: 8 × 8 descriptor" aria-label="Enlarge feature 3: 8 × 8 descriptor"><img src="media/part2/descriptor_3.png" alt="Grayscale blocks of a normalized feature descriptor, feature 3" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 3</strong><span>Left building photo, (x, y) = (808, 571).</span></figcaption></figure><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_4.png" data-lightbox data-caption="Feature 4: 40 × 40 window" aria-label="Enlarge feature 4: 40 × 40 window"><img src="media/part2/patch_4.png" alt="Original color window around the selected building feature, feature 4" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_4.png" data-lightbox data-caption="Feature 4: 8 × 8 descriptor" aria-label="Enlarge feature 4: 8 × 8 descriptor"><img src="media/part2/descriptor_4.png" alt="Grayscale blocks of a normalized feature descriptor, feature 4" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 4</strong><span>Left building photo, (x, y) = (708, 432).</span></figcaption></figure><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_5.png" data-lightbox data-caption="Feature 5: 40 × 40 window" aria-label="Enlarge feature 5: 40 × 40 window"><img src="media/part2/patch_5.png" alt="Original color window around the selected building feature, feature 5" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_5.png" data-lightbox data-caption="Feature 5: 8 × 8 descriptor" aria-label="Enlarge feature 5: 8 × 8 descriptor"><img src="media/part2/descriptor_5.png" alt="Grayscale blocks of a normalized feature descriptor, feature 5" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 5</strong><span>Left building photo, (x, y) = (695, 365).</span></figcaption></figure><figure class="image-card descriptor-card"><div class="descriptor-pair"><div><a class="image-link" href="media/part2/patch_6.png" data-lightbox data-caption="Feature 6: 40 × 40 window" aria-label="Enlarge feature 6: 40 × 40 window"><img src="media/part2/patch_6.png" alt="Original color window around the selected building feature, feature 6" width="320" height="320" loading="lazy" decoding="async"></a><span>40 × 40 window</span></div><div><a class="image-link" href="media/part2/descriptor_6.png" data-lightbox data-caption="Feature 6: 8 × 8 descriptor" aria-label="Enlarge feature 6: 8 × 8 descriptor"><img src="media/part2/descriptor_6.png" alt="Grayscale blocks of a normalized feature descriptor, feature 6" width="320" height="320" loading="lazy" decoding="async"></a><span>8 × 8 descriptor</span></div></div><figcaption><strong>Feature 6</strong><span>Left building photo, (x, y) = (568, 614).</span></figcaption></figure></div>
+  <p class="small-note">Six features from RANSAC inliers in the left building photo. Each pair shows the original color window and its normalized grayscale descriptor. The 8 × 8 cells are enlarged with nearest-neighbor display; only the display is clipped to [−2, 2]. Matching uses the full normalized values.</p>
+</div></section>
+
+<section class="section" id="matching"><div class="section-inner">
+  <div class="section-head"><span class="section-label">B.3 Feature matching</span><h2>Matching the descriptors</h2><p>I compared each source descriptor with the reference descriptors using SSD (sum of squared differences). A match passed the ratio test when the best SSD was less than 0.7 times the second-best SSD.</p></div>
+  <div class="formula"><div class="equation">SSD(d<sub>1</sub>, d<sub>2</sub>) = Σ<sub>k</sub> (d<sub>1,k</sub> − d<sub>2,k</sub>)<sup>2</sup></div><div class="equation">SSD<sub>nearest</sub> / SSD<sub>second-nearest</sub> &lt; 0.7</div><p class="formula-caption">The threshold is a ratio of squared distances. I also require the two features to be mutual nearest neighbors.</p></div>
+  <figure class="image-card wide-result">
+  <a class="image-link" href="media/part2/matches.png" data-lightbox data-caption="Candidate matches: left building view → middle view (1707 × 640 px)" aria-label="Enlarge: Candidate matches: left building view → middle view">
+    <img src="media/part2/matches.png" alt="Blue lines connect candidate feature pairs between two overlapping views of the stone building." width="1707" height="640" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Candidate matches: left building view → middle view</strong><span>61 pairs remain after the ratio test and mutual-neighbor check.</span></figcaption>
+</figure>
+  <p>Several lines connect unrelated sky points. I used RANSAC to check the matches against a common homography.</p>
+</div></section>
+
+<section class="section soft" id="ransac"><div class="section-inner">
+  <div class="section-head"><span class="section-label">B.4 Robust homography estimation</span><h2>Estimating H with RANSAC</h2><p>In each RANSAC trial, I randomly selected four pairs and computed H with the Part A homography function. I normalized the point coordinates before solving and skipped degenerate or singular estimates.</p><p>I counted a pair as an inlier when its forward reprojection error was less than 3 pixels in the working reference image. I kept the H with the most inliers, then fitted it again using the inliers.</p></div>
+  <div class="formula"><div class="equation">e<sub>i</sub> = ‖project(H [x<sub>i</sub>, y<sub>i</sub>, 1]<sup>T</sup>) − [u<sub>i</sub>, v<sub>i</sub>]<sup>T</sup>‖ &lt; 3 px</div><p class="formula-caption">At most 2,000 trials, with an adaptive stopping estimate targeting 99.9% success and at least 100 trials. The random seed is fixed at 0.</p></div>
+  <figure class="image-card wide-result">
+  <a class="image-link" href="media/part2/ransac.png" data-lightbox data-caption="After RANSAC: 38 inliers out of 61 matches (1707 × 640 px)" aria-label="Enlarge: After RANSAC: 38 inliers out of 61 matches">
+    <img src="media/part2/ransac.png" alt="Green lines connect consistent building features while red lines mark rejected matches, mainly across the sky." width="1707" height="640" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>After RANSAC: 38 inliers out of 61 matches</strong><span>Green pairs agree with the fitted homography; red pairs fall outside the 3-pixel threshold.</span></figcaption>
+</figure>
+  <div class="table-wrap"><table><caption>Single-scale matching results; errors are measured on final RANSAC inliers</caption><thead><tr><th scope="col">Photo set</th><th scope="col">Pair</th><th scope="col">Matches</th><th scope="col">Inliers</th><th scope="col">Mean error (px)</th></tr></thead><tbody><tr><td>Building and lawn</td><td>Left → middle</td><td>61</td><td>38</td><td>1.05</td></tr><tr><td>Building and lawn</td><td>Right → middle</td><td>73</td><td>53</td><td>1.34</td></tr><tr><td>Street corner</td><td>Left → middle</td><td>136</td><td>104</td><td>1.33</td></tr><tr><td>Street corner</td><td>Right → middle</td><td>110</td><td>75</td><td>1.46</td></tr><tr><td>Boat and riverbank</td><td>First → second</td><td>109</td><td>73</td><td>1.05</td></tr></tbody></table></div>
+  <p class="small-note">Errors are measured on the fitted inliers; they do not measure alignment over the whole image.</p>
+  <article class="subsection" id="automatic-mosaics"><div class="subhead"><h3>Three automatic mosaics</h3></div><p>The campus images are sampled to 854 × 640 pixels and the boat images to 972 × 648 pixels. The middle campus photo, or the second boat photo, is the reference. I then reuse Part A’s inverse warp, bilinear interpolation, edge weights, and two-layer blend.</p><p>For this comparison, I rendered the manual mosaics again at the same input resolution as the automatic ones, using the saved clicked points. The manual points were only used for the comparison.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Building and lawn</h3></div>
+<div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test_manual.png" data-lightbox data-caption="Manual alignment (1728 × 1062 px)" aria-label="Enlarge: Manual alignment">
+    <img src="media/part2/self_test_manual.png" alt="Manually stitched panorama of building and lawn" width="1728" height="1062" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Manual alignment</strong><span>1728 × 1062 px; saved clicked points.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test_automatic.png" data-lightbox data-caption="Automatic alignment (2633 × 1299 px)" aria-label="Enlarge: Automatic alignment">
+    <img src="media/part2/self_test_automatic.png" alt="Automatically stitched panorama of building and lawn" width="2633" height="1299" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Automatic alignment</strong><span>2633 × 1299 px; feature matching and RANSAC.</span></figcaption>
+</figure></div>
+<p>The manual result has a double roof edge and a faint second lamp pole. These are less visible in the automatic result, and the front windows line up more closely. The outer views are still stretched.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Street corner</h3></div>
+<div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test2_manual.png" data-lightbox data-caption="Manual alignment (2826 × 1116 px)" aria-label="Enlarge: Manual alignment">
+    <img src="media/part2/self_test2_manual.png" alt="Manually stitched panorama of street corner" width="2826" height="1116" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Manual alignment</strong><span>2826 × 1116 px; saved clicked points.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test2_automatic.png" data-lightbox data-caption="Automatic alignment (1696 × 952 px)" aria-label="Enlarge: Automatic alignment">
+    <img src="media/part2/self_test2_automatic.png" alt="Automatically stitched panorama of street corner" width="1696" height="952" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Automatic alignment</strong><span>1696 × 952 px; feature matching and RANSAC.</span></figcaption>
+</figure></div>
+<p>The automatic result has fewer double edges around the building. Some cars still have overlapping outlines. The traffic light at the upper left remains cut off because its support is outside the source photos.</p></article>
+  <article class="subsection"><div class="subhead"><h3>Boat and riverbank</h3></div>
+<div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/part2/boat_manual.png" data-lightbox data-caption="Manual alignment (1461 × 766 px)" aria-label="Enlarge: Manual alignment">
+    <img src="media/part2/boat_manual.png" alt="Manually stitched panorama of boat and riverbank" width="1461" height="766" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Manual alignment</strong><span>1461 × 766 px; saved clicked points.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/part2/boat_automatic.png" data-lightbox data-caption="Automatic alignment (1356 × 752 px)" aria-label="Enlarge: Automatic alignment">
+    <img src="media/part2/boat_automatic.png" alt="Automatically stitched panorama of boat and riverbank" width="1356" height="752" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Automatic alignment</strong><span>1356 × 752 px; feature matching and RANSAC.</span></figcaption>
+</figure></div>
+<p>The automatic result stretches the left side less than the manual result. The ship and distant buildings line up, but branches and reflections remain blurred in the overlap. The water also changes brightness across the join.</p></article>
+  <p class="small-note">Each result uses its own transformed corner bounds. Different canvas sizes come from different homographies; black areas have no source pixels.</p>
+</div></section>
+
+<section class="section" id="multiscale"><div class="section-inner">
+  <div class="section-head"><span class="section-label">B.5 Bells &amp; whistles / Multiscale processing</span><h2>Multiscale features</h2><p>I used three pyramid levels for this extension. At each level, I detected Harris corners, ran ANMS, and extracted descriptors. Before downsampling, I applied a Gaussian filter with σ = 1 and kept every second pixel.</p><p>The levels are 854 × 640, 427 × 320, and 214 × 160 pixels for the building photos. Multiplying the corner coordinates by 1, 2, or 4 brings them back to the working-image coordinates. Descriptors from different levels can then match each other.</p></div>
+  <figure class="image-card wide-result">
+  <a class="image-link" href="media/part2/multiscale_corners.png" data-lightbox data-caption="Features from all three pyramid levels (853 × 640 px)" aria-label="Enlarge: Features from all three pyramid levels">
+    <img src="media/part2/multiscale_corners.png" alt="Blue, gold, and coral feature points from three pyramid levels over the left building photo." width="853" height="640" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Features from all three pyramid levels</strong><span>500 points per level, shown in the coordinates of the original working image.</span></figcaption>
+</figure>
+  <div class="scale-legend" aria-label="Pyramid level colors"><span><i class="level-zero"></i>Level 0 · 1× coordinates</span><span><i class="level-one"></i>Level 1 · 2× coordinates</span><span><i class="level-two"></i>Level 2 · 4× coordinates</span></div>
+  <p>A 40 × 40 window at each level covers 40 × 40, 80 × 80, or 160 × 160 pixels of the original working image. The descriptors remain axis-aligned.</p>
+  <div class="projection-pair"><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test_automatic.png" data-lightbox data-caption="Single-scale automatic mosaic (2633 × 1299 px)" aria-label="Enlarge: Single-scale automatic mosaic">
+    <img src="media/part2/self_test_automatic.png" alt="Single-scale automatic panorama of the stone building and lawn." width="2633" height="1299" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Single-scale automatic mosaic</strong><span>500 features per image.</span></figcaption>
+</figure><figure class="image-card ">
+  <a class="image-link" href="media/part2/self_test_multiscale_automatic.png" data-lightbox data-caption="Three-scale automatic mosaic (2671 × 1297 px)" aria-label="Enlarge: Three-scale automatic mosaic">
+    <img src="media/part2/self_test_multiscale_automatic.png" alt="Three-scale automatic panorama of the same stone building and lawn." width="2671" height="1297" loading="lazy" decoding="async">
+  </a>
+  <figcaption><strong>Three-scale automatic mosaic</strong><span>1,500 features per image, combined across three levels.</span></figcaption>
+</figure></div>
+  <div class="table-wrap"><table><caption>Building and lawn: single-scale and multiscale matching</caption><thead><tr><th scope="col">Pair</th><th scope="col">Method</th><th scope="col">Matches</th><th scope="col">Inliers</th><th scope="col">Mean error (px)</th></tr></thead><tbody><tr><td>Left → middle</td><td>Single scale</td><td>61</td><td>38</td><td>1.05</td></tr><tr><td>Left → middle</td><td>Three scales</td><td>188</td><td>121</td><td>1.41</td></tr><tr><td>Right → middle</td><td>Single scale</td><td>73</td><td>53</td><td>1.34</td></tr><tr><td>Right → middle</td><td>Three scales</td><td>261</td><td>156</td><td>1.55</td></tr></tbody></table></div>
+  <p>Both pairs have more inliers with three scales, but the visible difference in the mosaic is small. The average inlier errors are slightly higher. The feature count also rises from 500 to 1,500 per image, which affects this comparison.</p>
+  <p>In a separate test with synthetic texture and a half-size copy, all 226 retained matches were within 1 pixel of their expected coordinates.</p>
+</div></section>
+
+<section class="section soft" id="part-b-reflection"><div class="section-inner">
+  <div class="learn-card"><h2>Discussion</h2><div><p>The sky matches in the building example show why I needed RANSAC after the ratio test. Some patches looked similar even though they came from different parts of the scene.</p><p>The automatic campus mosaics have cleaner building edges than the manual versions. The remaining double edges around cars show a limitation of fitting one homography to the whole scene.</p></div></div>
+  <p class="credit">Method reference: <a href="https://www.microsoft.com/en-us/research/publication/multi-image-matching-using-multi-scale-oriented-patches/" target="_blank" rel="noopener">Brown, Szeliski, and Winder, <em>Multi-Image Matching using Multi-Scale Oriented Patches</em> (2005)</a>. I follow the assignment’s simplified patch descriptor and nearest-neighbor ratio test, with the provided Harris detector.</p>
+</div></section>
+
 </main>
-<footer><div class="footer-inner"><span>Zian Pan / CS 280A / Project 4 Part A</span><span>Image Warping and Mosaicing</span></div></footer>
+<footer><div class="footer-inner"><span>Zian Pan / CS 280A / Project 4 Parts A &amp; B</span><span>Image Warping, Mosaicing and Autostitching</span></div></footer>
 <a class="back-top" href="#start" hidden aria-label="Back to top">↑ Top</a>
 <dialog class="image-viewer" id="image-viewer" aria-label="Enlarged project image" aria-describedby="viewer-caption">
   <div class="viewer-toolbar"><a id="viewer-original" href="media/planar_3_images.png" target="_blank" rel="noopener">Open full-resolution image ↗</a><button class="viewer-close" id="viewer-close" type="button" autofocus>Close ×</button></div>

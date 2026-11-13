@@ -182,3 +182,43 @@ summary { cursor: pointer; padding: 17px 20px; font-size: .94rem; font-weight: 7
   .formula, .table-wrap, .matrix-card { overflow: visible; }
   .footer-inner { padding: 20px 0; }
 }
+
+/* Part B continues the Part A page. */
+.part-b-intro { border-top: 1px solid var(--line); }
+.section-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 25px 0; }
+.section-nav a { padding: 8px 15px; background: white; border: 1px solid var(--line); border-radius: 999px; color: var(--accent-strong); text-decoration: none; font-size: .84rem; }
+.section-nav a:hover { border-color: var(--accent-strong); }
+.pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 28px 0 0; padding: 0; list-style: none; }
+.pipeline li { padding: 21px; background: white; border: 1px solid var(--line); border-radius: 18px; }
+.pipeline li > span { display: block; margin-bottom: 12px; color: #7895aa; font-size: .8rem; }
+.pipeline strong { display: block; line-height: 1.35; font-size: .96rem; }
+.pipeline p { margin: 7px 0 0; font-size: .82rem; }
+.descriptor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 26px 0; }
+.descriptor-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.descriptor-pair img { image-rendering: pixelated; }
+.descriptor-pair span { display: block; margin-top: 7px; color: var(--muted); text-align: center; font-size: .74rem; }
+.scale-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 25px; margin: -6px 0 25px; color: var(--soft); font-size: .85rem; }
+.scale-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.scale-legend i { width: 10px; height: 10px; border-radius: 50%; }
+.level-zero { background: #69bfea; }
+.level-one { background: #f2bf6a; }
+.level-two { background: #ea8c85; }
+@media (max-width: 860px) {
+  .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .descriptor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .nav-links { justify-content: flex-start; gap: 18px; }
+  .pipeline { gap: 10px; }
+  .pipeline li { padding: 17px; }
+  .descriptor-grid { grid-template-columns: 1fr; }
+  .descriptor-card { max-width: 420px; width: 100%; margin: auto; }
+  .section-nav { gap: 8px; }
+  .section-nav a { padding: 7px 12px; }
+  .scale-legend { justify-content: flex-start; }
+}
+@media print {
+  .section-nav { display: none; }
+  .pipeline { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .descriptor-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
